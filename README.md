@@ -1,7 +1,7 @@
 # Bizora
 
 <p align="center">
-  <img src="/platform-assets/platform-logo.png" alt="Bizora" width="220" />
+  <img src="platform-assets/platform-logo.png" alt="Bizora" width="220" />
 </p>
 
 > **Your Business, Simplified.**
