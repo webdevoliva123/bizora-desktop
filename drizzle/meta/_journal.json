@@ -8,6 +8,13 @@
       "when": 1790967910264,
       "tag": "0000_young_warbound",
       "breakpoints": true
+    },
+    {
+      "idx": 1,
+      "version": "6",
+      "when": 1790972615637,
+      "tag": "0001_dazzling_wraith",
+      "breakpoints": true
     }
   ]
 }

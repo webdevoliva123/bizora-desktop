@@ -1,291 +1,382 @@
 "use client";
 
-import { CreditCard, QrCode } from "lucide-react";
+import { useEffect, useMemo, useState } from "react";
 
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 
+import { uploadSetupTempFile } from "../actions";
 import { useSetupState } from "./setup-state";
 
 export function PaymentDetailsStep() {
-  const { setupData, updateSetupData } = useSetupState();
+  const {
+    setupData,
+    updateSetupData,
+  } = useSetupState();
 
-  const paymentDetails = setupData.paymentDetails;
+  const [qrPreviewUrl, setQrPreviewUrl] =
+    useState<string | null>(null);
 
-  const updatePaymentDetails = (
-    field: keyof typeof paymentDetails,
-    value: string | File | null,
-  ) => {
-    updateSetupData("paymentDetails", {
-      ...paymentDetails,
-      [field]: value,
-    });
-  };
+  const [isUploadingQr, setIsUploadingQr] =
+    useState(false);
 
-  const handleQrCodeChange = (
+  /*
+   * Create a browser preview for a newly
+   * selected QR File.
+   */
+  useEffect(() => {
+    if (!setupData.paymentDetails.qrCode) {
+      setQrPreviewUrl(null);
+      return;
+    }
+
+    const objectUrl = URL.createObjectURL(
+      setupData.paymentDetails.qrCode,
+    );
+
+    setQrPreviewUrl(objectUrl);
+
+    return () => {
+      URL.revokeObjectURL(objectUrl);
+    };
+  }, [
+    setupData.paymentDetails.qrCode,
+  ]);
+
+  /*
+   * After refresh/restart the File object is gone,
+   * so use the persisted temporary file path.
+   */
+  const savedQrUrl = useMemo(() => {
+    const qrCode =
+      setupData.paymentDetails.qrCode;
+
+    const qrCodePath =
+      setupData.paymentDetails.qrCodePath;
+
+    if (qrCode || !qrCodePath) {
+      return null;
+    }
+
+    return `/api/setup/temp-file?path=${encodeURIComponent(
+      qrCodePath,
+    )}`;
+  }, [
+    setupData.paymentDetails.qrCode,
+    setupData.paymentDetails.qrCodePath,
+  ]);
+
+  const previewUrl =
+    qrPreviewUrl ?? savedQrUrl;
+
+  const handleQrChange = async (
     event: React.ChangeEvent<HTMLInputElement>,
   ) => {
-    updatePaymentDetails(
-      "qrCode",
-      event.target.files?.[0] ?? null,
-    );
+    const file =
+      event.target.files?.[0] ?? null;
+
+    if (!file) {
+      updateSetupData(
+        "paymentDetails",
+        {
+          ...setupData.paymentDetails,
+          qrCode: null,
+          qrCodePath: null,
+        },
+      );
+
+      return;
+    }
+
+    try {
+      setIsUploadingQr(true);
+
+      const path =
+        await uploadSetupTempFile(
+          file,
+          "payment",
+        );
+
+      updateSetupData(
+        "paymentDetails",
+        {
+          ...setupData.paymentDetails,
+          qrCode: file,
+          qrCodePath: path,
+        },
+      );
+    } catch (error) {
+      console.error(
+        "Failed to save payment QR code:",
+        error,
+      );
+    } finally {
+      setIsUploadingQr(false);
+    }
   };
 
   return (
     <div className="py-4">
       {/* Header */}
       <div className="mb-8">
-        <div className="mb-3 flex size-10 items-center justify-center rounded-lg bg-primary/10 text-primary">
-          <CreditCard className="size-5" />
-        </div>
-
         <h1 className="text-2xl font-semibold tracking-tight">
           Payment Details
         </h1>
 
         <p className="mt-2 text-sm text-muted-foreground">
-          Add the payment information you want to display on your
-          bills and invoices.
+          Add your business payment details. These
+          details can appear directly on customer
+          invoices and bills.
         </p>
       </div>
 
-      <div className="space-y-8">
-        {/* Bank Details */}
-        <section className="space-y-5">
-          <div>
-            <h2 className="text-sm font-medium">
-              Bank Details
-            </h2>
+      <div className="space-y-6">
+        {/* Bank Name */}
+        <div className="space-y-2">
+          <Label htmlFor="payment-bank-name">
+            Bank Name
+          </Label>
 
-            <p className="mt-1 text-xs text-muted-foreground">
-              These details can be displayed on customer invoices
-              for bank transfers.
-            </p>
-          </div>
-
-          <div className="grid gap-5 sm:grid-cols-2">
-            {/* Bank Name */}
-            <div className="space-y-2">
-              <Label htmlFor="bank-name">
-                Bank Name
-              </Label>
-
-              <Input
-                id="bank-name"
-                value={paymentDetails.bankName}
-                onChange={(event) =>
-                  updatePaymentDetails(
-                    "bankName",
+          <Input
+            id="payment-bank-name"
+            value={
+              setupData.paymentDetails.bankName
+            }
+            onChange={(event) =>
+              updateSetupData(
+                "paymentDetails",
+                {
+                  ...setupData.paymentDetails,
+                  bankName:
                     event.target.value,
-                  )
-                }
-                placeholder="e.g. State Bank"
-              />
-            </div>
+                },
+              )
+            }
+            placeholder="e.g. ICICI Bank"
+          />
+        </div>
 
-            {/* Account Name */}
-            <div className="space-y-2">
-              <Label htmlFor="account-name">
-                Account Name
-              </Label>
+        {/* Account Name */}
+        <div className="space-y-2">
+          <Label htmlFor="payment-account-name">
+            Account Name
+          </Label>
 
-              <Input
-                id="account-name"
-                value={paymentDetails.accountName}
-                onChange={(event) =>
-                  updatePaymentDetails(
-                    "accountName",
+          <Input
+            id="payment-account-name"
+            value={
+              setupData.paymentDetails.accountName
+            }
+            onChange={(event) =>
+              updateSetupData(
+                "paymentDetails",
+                {
+                  ...setupData.paymentDetails,
+                  accountName:
                     event.target.value,
-                  )
-                }
-                placeholder="Name on bank account"
-              />
-            </div>
+                },
+              )
+            }
+            placeholder="Business account name"
+          />
+        </div>
 
-            {/* Account Number */}
-            <div className="space-y-2">
-              <Label htmlFor="account-number">
-                Account Number
-              </Label>
+        {/* Account Number */}
+        <div className="space-y-2">
+          <Label htmlFor="payment-account-number">
+            Account Number
+          </Label>
 
-              <Input
-                id="account-number"
-                value={paymentDetails.accountNumber}
-                onChange={(event) =>
-                  updatePaymentDetails(
-                    "accountNumber",
+          <Input
+            id="payment-account-number"
+            value={
+              setupData.paymentDetails.accountNumber
+            }
+            onChange={(event) =>
+              updateSetupData(
+                "paymentDetails",
+                {
+                  ...setupData.paymentDetails,
+                  accountNumber:
                     event.target.value,
-                  )
-                }
-                placeholder="Bank account number"
-              />
-            </div>
+                },
+              )
+            }
+            placeholder="Bank account number"
+          />
+        </div>
 
-            {/* Branch */}
-            <div className="space-y-2">
-              <Label htmlFor="branch-name">
-                Branch
-                <span className="ml-1 text-muted-foreground">
-                  (Optional)
-                </span>
-              </Label>
-
-              <Input
-                id="branch-name"
-                value={paymentDetails.branchName}
-                onChange={(event) =>
-                  updatePaymentDetails(
-                    "branchName",
-                    event.target.value,
-                  )
-                }
-                placeholder="Branch name"
-              />
-            </div>
-
-            {/* Routing Code */}
-            <div className="space-y-2 sm:col-span-2">
-              <Label htmlFor="routing-code">
-                Routing / Bank Code
-                <span className="ml-1 text-muted-foreground">
-                  (Optional)
-                </span>
-              </Label>
-
-              <Input
-                id="routing-code"
-                value={paymentDetails.routingCode}
-                onChange={(event) =>
-                  updatePaymentDetails(
-                    "routingCode",
-                    event.target.value,
-                  )
-                }
-                placeholder="e.g. IFSC, SWIFT, routing number"
-              />
-
-              <p className="text-xs text-muted-foreground">
-                Use the bank identification code applicable to your
-                country.
-              </p>
-            </div>
-          </div>
-        </section>
-
-        {/* QR / Payment Identifier */}
-        <section className="space-y-5 border-t pt-8">
-          <div>
-            <div className="flex items-center gap-2">
-              <QrCode className="size-4 text-muted-foreground" />
-
-              <h2 className="text-sm font-medium">
-                QR / Payment Identifier
-              </h2>
-            </div>
-
-            <p className="mt-1 text-xs text-muted-foreground">
-              Optionally add a QR code or payment identifier that
-              customers can use to make payments.
-            </p>
-          </div>
-
-          {/* Payment Identifier */}
+        {/* Branch + Routing */}
+        <div className="grid gap-6 sm:grid-cols-2">
           <div className="space-y-2">
-            <Label htmlFor="payment-identifier">
-              Payment Identifier
-              <span className="ml-1 text-muted-foreground">
-                (Optional)
-              </span>
+            <Label htmlFor="payment-branch-name">
+              Branch Name
             </Label>
 
             <Input
-              id="payment-identifier"
-              value={paymentDetails.paymentIdentifier}
+              id="payment-branch-name"
+              value={
+                setupData.paymentDetails.branchName
+              }
               onChange={(event) =>
-                updatePaymentDetails(
-                  "paymentIdentifier",
-                  event.target.value,
+                updateSetupData(
+                  "paymentDetails",
+                  {
+                    ...setupData.paymentDetails,
+                    branchName:
+                      event.target.value,
+                  },
                 )
               }
-              placeholder="e.g. UPI ID, payment handle, account identifier"
+              placeholder="Branch name"
             />
-
-            <p className="text-xs text-muted-foreground">
-              This is displayed as payment information. Bizora does
-              not create a payment request or dynamically generate
-              payment amounts.
-            </p>
           </div>
 
-          {/* QR Code */}
           <div className="space-y-2">
-            <Label htmlFor="payment-qr">
-              Payment QR Code
-              <span className="ml-1 text-muted-foreground">
-                (Optional)
-              </span>
+            <Label htmlFor="payment-routing-code">
+              Routing / Bank Code
             </Label>
 
             <Input
-              id="payment-qr"
-              type="file"
-              accept="image/png,image/jpeg,image/webp"
-              onChange={handleQrCodeChange}
+              id="payment-routing-code"
+              value={
+                setupData.paymentDetails.routingCode
+              }
+              onChange={(event) =>
+                updateSetupData(
+                  "paymentDetails",
+                  {
+                    ...setupData.paymentDetails,
+                    routingCode:
+                      event.target.value,
+                  },
+                )
+              }
+              placeholder="e.g. IFSC / routing code"
             />
-
-            <p className="text-xs text-muted-foreground">
-              Upload a static payment QR code provided by your
-              payment provider or bank.
-            </p>
-
-            {paymentDetails.qrCode && (
-              <p className="text-xs text-muted-foreground">
-                Selected: {paymentDetails.qrCode.name}
-              </p>
-            )}
           </div>
-        </section>
+        </div>
 
-        {/* Payment Instructions */}
-        <section className="space-y-2 border-t pt-8">
-          <Label htmlFor="payment-instructions">
-            Payment Instructions
+        {/* Payment Identifier */}
+        <div className="space-y-2">
+          <Label htmlFor="payment-identifier">
+            Payment Identifier
+          </Label>
+
+          <Input
+            id="payment-identifier"
+            value={
+              setupData.paymentDetails
+                .paymentIdentifier
+            }
+            onChange={(event) =>
+              updateSetupData(
+                "paymentDetails",
+                {
+                  ...setupData.paymentDetails,
+                  paymentIdentifier:
+                    event.target.value,
+                },
+              )
+            }
+            placeholder="e.g. UPI ID / payment identifier"
+          />
+
+          <p className="text-xs text-muted-foreground">
+            This can be shown on invoices alongside
+            your payment details.
+          </p>
+        </div>
+
+        {/* QR Code */}
+        <div className="space-y-2">
+          <Label htmlFor="payment-qr-code">
+            Payment QR Code
             <span className="ml-1 text-muted-foreground">
               (Optional)
             </span>
           </Label>
 
+          <Input
+            id="payment-qr-code"
+            type="file"
+            accept="image/png,image/jpeg,image/webp"
+            onChange={handleQrChange}
+            disabled={isUploadingQr}
+          />
+
+          <p className="text-xs text-muted-foreground">
+            Upload the QR code customers can scan
+            to make a payment.
+          </p>
+
+          {/* QR Preview */}
+          {previewUrl && (
+            <div className="mt-4 flex items-center gap-4 rounded-lg border p-4">
+              <div className="flex size-28 items-center justify-center overflow-hidden rounded-md border bg-muted p-2">
+                <img
+                  src={previewUrl}
+                  alt="Payment QR code preview"
+                  className="size-full object-contain"
+                />
+              </div>
+
+              <div>
+                <p className="text-sm font-medium">
+                  {setupData.paymentDetails
+                    .qrCode
+                    ? setupData.paymentDetails
+                        .qrCode.name
+                    : "Saved payment QR code"}
+                </p>
+
+                <p className="text-xs text-muted-foreground">
+                  {setupData.paymentDetails
+                    .qrCode
+                    ? "QR code selected"
+                    : "QR code restored from saved setup"}
+                </p>
+              </div>
+            </div>
+          )}
+
+          {isUploadingQr && (
+            <p className="text-xs text-muted-foreground">
+              Saving QR code...
+            </p>
+          )}
+        </div>
+
+        {/* Payment Instructions */}
+        <div className="space-y-2">
+          <Label htmlFor="payment-instructions">
+            Payment Instructions
+          </Label>
+
           <Textarea
             id="payment-instructions"
-            value={paymentDetails.paymentInstructions}
+            value={
+              setupData.paymentDetails
+                .paymentInstructions
+            }
             onChange={(event) =>
-              updatePaymentDetails(
-                "paymentInstructions",
-                event.target.value,
+              updateSetupData(
+                "paymentDetails",
+                {
+                  ...setupData.paymentDetails,
+                  paymentInstructions:
+                    event.target.value,
+                },
               )
             }
-            placeholder="e.g. Please include your invoice number as the payment reference."
+            placeholder="e.g. Scan the QR code or use the bank details above to make payment."
             rows={4}
           />
 
           <p className="text-xs text-muted-foreground">
-            These instructions can appear on your customer bills
-            and invoices.
-          </p>
-        </section>
-
-        {/* Information */}
-        <div className="rounded-lg border bg-muted/30 p-4">
-          <p className="text-sm font-medium">
-            How payment information works
-          </p>
-
-          <p className="mt-1 text-xs leading-5 text-muted-foreground">
-            Your configured payment details will be shown directly
-            on invoices. Customers can scan the QR code or use the
-            bank details to make the payment and enter the invoice
-            total themselves.
+            These instructions can appear on your
+            invoices and bills.
           </p>
         </div>
       </div>

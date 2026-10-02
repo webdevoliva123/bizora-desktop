@@ -3,9 +3,13 @@
 import {
   createContext,
   useContext,
+  useEffect,
   useMemo,
   useState,
 } from "react";
+import { loadSetupDraft, saveSetupDraft } from "./setup-storage";
+
+
 
 export interface SetupTaxRegistration {
   id: string;
@@ -31,22 +35,19 @@ export interface SetupPaymentDetails {
   routingCode: string;
   paymentIdentifier: string;
   qrCode: File | null;
+  qrCodePath: string | null;
   paymentInstructions: string;
 }
 
 export interface SetupCustomer {
   id: string;
   type: "person" | "business";
-
   firstName: string;
   lastName: string;
-
   businessName: string;
   contactPerson: string;
-
   phone: string;
   email: string;
-
   taxRegistration: string;
   address: string;
 }
@@ -66,11 +67,14 @@ export interface SetupProduct {
 export interface SetupData {
   country: string;
   currency: string;
+
   businessType: string;
   businessCategory: string;
 
   businessName: string;
   logo: File | null;
+  logoPath: string | null;
+
   address: string;
   city: string;
   region: string;
@@ -87,18 +91,20 @@ export interface SetupData {
   paymentDetails: SetupPaymentDetails;
 
   customers: SetupCustomer[];
-
   products: SetupProduct[];
 }
 
-const initialSetupData: SetupData = {
+export const initialSetupData: SetupData = {
   country: "IN",
   currency: "INR",
+
   businessType: "",
   businessCategory: "",
 
   businessName: "",
   logo: null,
+  logoPath: null,
+
   address: "",
   city: "",
   region: "",
@@ -120,21 +126,25 @@ const initialSetupData: SetupData = {
     routingCode: "",
     paymentIdentifier: "",
     qrCode: null,
+    qrCodePath: null,
     paymentInstructions: "",
   },
 
   customers: [],
-
   products: [],
 };
 
 interface SetupStateContextValue {
   setupData: SetupData;
+  currentStep: number;
+  isHydrated: boolean;
 
   updateSetupData: <K extends keyof SetupData>(
     key: K,
     value: SetupData[K],
   ) => void;
+
+  setCurrentStep: (step: number) => void;
 
   resetSetup: () => void;
 }
@@ -150,6 +160,43 @@ export function SetupStateProvider({
   const [setupData, setSetupData] =
     useState<SetupData>(initialSetupData);
 
+  const [currentStep, setCurrentStepState] =
+    useState(0);
+
+  const [isHydrated, setIsHydrated] =
+    useState(false);
+
+  /*
+   * Restore the saved setup draft
+   * after the browser/Electron renderer loads.
+   */
+  useEffect(() => {
+    const draft = loadSetupDraft();
+
+    if (draft) {
+      setSetupData(draft.setupData);
+      setCurrentStepState(draft.currentStep);
+    }
+
+    setIsHydrated(true);
+  }, []);
+
+  /*
+   * Automatically save setup progress
+   * whenever data or the current step changes.
+   */
+  useEffect(() => {
+    if (!isHydrated) {
+      return;
+    }
+
+    saveSetupDraft(setupData, currentStep);
+  }, [
+    setupData,
+    currentStep,
+    isHydrated,
+  ]);
+
   const updateSetupData = <K extends keyof SetupData>(
     key: K,
     value: SetupData[K],
@@ -160,17 +207,29 @@ export function SetupStateProvider({
     }));
   };
 
+  const setCurrentStep = (step: number) => {
+    setCurrentStepState(step);
+  };
+
   const resetSetup = () => {
     setSetupData(initialSetupData);
+    setCurrentStepState(0);
   };
 
   const value = useMemo(
     () => ({
       setupData,
+      currentStep,
+      isHydrated,
       updateSetupData,
+      setCurrentStep,
       resetSetup,
     }),
-    [setupData],
+    [
+      setupData,
+      currentStep,
+      isHydrated,
+    ],
   );
 
   return (

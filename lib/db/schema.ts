@@ -19,6 +19,8 @@ import {
       logoPath: text("logo_path"),
   
       businessType: text("business_type").notNull(),
+
+      businessCategory: text("business_category"),
   
       country: text("country").notNull(),
       currency: text("currency").notNull().default("INR"),

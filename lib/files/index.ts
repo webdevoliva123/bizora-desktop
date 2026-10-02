@@ -3,7 +3,10 @@ import "server-only";
 import fs from "node:fs";
 import path from "node:path";
 
-const BUSINESS_FILES_DIR = path.join(process.cwd(), "business-files");
+const BUSINESS_FILES_DIR = path.join(
+  process.cwd(),
+  "business-files",
+);
 
 export function getBusinessFilesDir() {
   return BUSINESS_FILES_DIR;
@@ -25,4 +28,60 @@ export function ensureBusinessFilesDir() {
       recursive: true,
     });
   }
+}
+
+/**
+ * Save a browser File into Bizora's local business-files directory.
+ *
+ * Returns the relative path that should be stored in SQLite.
+ *
+ * Example:
+ * business/logo-1727900000000.png
+ */
+export async function saveBusinessFile(
+  file: File,
+  folder: "business" | "customers" | "products" | "documents" | "invoices",
+) {
+  ensureBusinessFilesDir();
+
+  const extension = getFileExtension(file.name);
+
+  const safeExtension = extension
+    ? `.${extension}`
+    : "";
+
+  const fileName = `${crypto.randomUUID()}${safeExtension}`;
+
+  const relativePath = path.join(
+    folder,
+    fileName,
+  );
+
+  const absolutePath = path.join(
+    BUSINESS_FILES_DIR,
+    relativePath,
+  );
+
+  const directory = path.dirname(absolutePath);
+
+  fs.mkdirSync(directory, {
+    recursive: true,
+  });
+
+  const buffer = Buffer.from(
+    await file.arrayBuffer(),
+  );
+
+  fs.writeFileSync(absolutePath, buffer);
+
+  return relativePath.replaceAll(path.sep, "/");
+}
+
+function getFileExtension(fileName: string) {
+  const extension = path.extname(fileName);
+
+  return extension
+    .replace(".", "")
+    .toLowerCase()
+    .replace(/[^a-z0-9]/g, "");
 }
