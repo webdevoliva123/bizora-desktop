@@ -1,77 +1,99 @@
 import {
+    index,
     integer,
     real,
     sqliteTable,
     text,
   } from "drizzle-orm/sqlite-core";
   
-  // ─────────────────────────────────────────────
-  // Business
-  // ─────────────────────────────────────────────
+  /* -------------------------------------------------------------------------- */
+  /* Businesses                                                                 */
+  /* -------------------------------------------------------------------------- */
   
-  export const businesses = sqliteTable("businesses", {
-    id: integer("id").primaryKey({ autoIncrement: true }),
+  export const businesses = sqliteTable(
+    "businesses",
+    {
+      id: integer("id").primaryKey({ autoIncrement: true }),
   
-    name: text("name").notNull(),
-    logoPath: text("logo_path"),
+      name: text("name").notNull(),
+      logoPath: text("logo_path"),
   
-    businessType: text("business_type").notNull(),
+      businessType: text("business_type").notNull(),
   
-    country: text("country").notNull(),
+      country: text("country").notNull(),
+      currency: text("currency").notNull().default("INR"),
   
-    address: text("address"),
-    city: text("city"),
-    state: text("state"),
-    postalCode: text("postal_code"),
+      address: text("address"),
+      city: text("city"),
+      state: text("state"),
+      postalCode: text("postal_code"),
   
-    phone: text("phone"),
-    email: text("email"),
+      phone: text("phone"),
+      email: text("email"),
   
-    setupCompleted: integer("setup_completed", {
-      mode: "boolean",
-    })
-      .notNull()
-      .default(false),
+      setupCompleted: integer("setup_completed", {
+        mode: "boolean",
+      })
+        .notNull()
+        .default(false),
   
-    createdAt: text("created_at").notNull(),
-    updatedAt: text("updated_at").notNull(),
-  });
+      createdAt: text("created_at").notNull(),
+      updatedAt: text("updated_at").notNull(),
+    },
+    (table) => [
+      index("businesses_country_idx").on(table.country),
+    ],
+  );
   
-  // ─────────────────────────────────────────────
-  // Tax Registrations
-  // ─────────────────────────────────────────────
+  /* -------------------------------------------------------------------------- */
+  /* Tax Registrations                                                          */
+  /* -------------------------------------------------------------------------- */
   
-  export const taxRegistrations = sqliteTable("tax_registrations", {
-    id: integer("id").primaryKey({ autoIncrement: true }),
+  export const taxRegistrations = sqliteTable(
+    "tax_registrations",
+    {
+      id: integer("id").primaryKey({ autoIncrement: true }),
   
-    businessId: integer("business_id").notNull(),
+      businessId: integer("business_id")
+        .notNull()
+        .references(() => businesses.id, {
+          onDelete: "cascade",
+        }),
   
-    country: text("country").notNull(),
+      country: text("country").notNull(),
   
-    taxSystem: text("tax_system").notNull(),
+      taxSystem: text("tax_system").notNull(),
   
-    registrationNumber: text("registration_number"),
+      registrationNumber: text("registration_number"),
   
-    isRegistered: integer("is_registered", {
-      mode: "boolean",
-    })
-      .notNull()
-      .default(false),
+      isRegistered: integer("is_registered", {
+        mode: "boolean",
+      })
+        .notNull()
+        .default(false),
   
-    createdAt: text("created_at").notNull(),
-    updatedAt: text("updated_at").notNull(),
-  });
+      createdAt: text("created_at").notNull(),
+      updatedAt: text("updated_at").notNull(),
+    },
+    (table) => [
+      index("tax_registrations_business_id_idx").on(table.businessId),
+    ],
+  );
   
-  // ─────────────────────────────────────────────
-  // Business / Regulatory Registrations
-  // ─────────────────────────────────────────────
+  /* -------------------------------------------------------------------------- */
+  /* Business / Regulatory Registrations                                        */
+  /* -------------------------------------------------------------------------- */
   
   export const businessRegistrations = sqliteTable(
     "business_registrations",
     {
       id: integer("id").primaryKey({ autoIncrement: true }),
   
-      businessId: integer("business_id").notNull(),
+      businessId: integer("business_id")
+        .notNull()
+        .references(() => businesses.id, {
+          onDelete: "cascade",
+        }),
   
       country: text("country").notNull(),
   
@@ -82,73 +104,161 @@ import {
       registrationNumber: text("registration_number"),
   
       issueDate: text("issue_date"),
-  
       expiryDate: text("expiry_date"),
   
       createdAt: text("created_at").notNull(),
       updatedAt: text("updated_at").notNull(),
     },
+    (table) => [
+      index("business_registrations_business_id_idx").on(
+        table.businessId,
+      ),
+    ],
   );
   
-  // ─────────────────────────────────────────────
-  // Customers
-  // ─────────────────────────────────────────────
+  /* -------------------------------------------------------------------------- */
+  /* Business Payment Details                                                   */
+  /* -------------------------------------------------------------------------- */
   
-  export const customers = sqliteTable("customers", {
-    id: integer("id").primaryKey({ autoIncrement: true }),
+  export const businessPaymentDetails = sqliteTable(
+    "business_payment_details",
+    {
+      id: integer("id").primaryKey({ autoIncrement: true }),
   
-    businessId: integer("business_id").notNull(),
+      businessId: integer("business_id")
+        .notNull()
+        .references(() => businesses.id, {
+          onDelete: "cascade",
+        }),
   
-    type: text("type").notNull(), // PERSON | BUSINESS
+      bankName: text("bank_name"),
+      accountName: text("account_name"),
+      accountNumber: text("account_number"),
+      branchName: text("branch_name"),
+      routingCode: text("routing_code"),
   
-    phone: text("phone"),
-    email: text("email"),
+      /*
+       * Country-neutral payment identifier.
+       *
+       * Examples:
+       * UPI ID
+       * PayID
+       * Other local payment identifiers
+       */
+      paymentIdentifier: text("payment_identifier"),
   
-    address: text("address"),
-    city: text("city"),
-    state: text("state"),
-    postalCode: text("postal_code"),
+      qrImagePath: text("qr_image_path"),
   
-    active: integer("active", {
-      mode: "boolean",
-    })
-      .notNull()
-      .default(true),
+      showBankDetails: integer("show_bank_details", {
+        mode: "boolean",
+      })
+        .notNull()
+        .default(true),
   
-    createdAt: text("created_at").notNull(),
-    updatedAt: text("updated_at").notNull(),
-  });
+      showQr: integer("show_qr", {
+        mode: "boolean",
+      })
+        .notNull()
+        .default(true),
   
-  // ─────────────────────────────────────────────
-  // Person Customer Details
-  // ─────────────────────────────────────────────
+      paymentInstructions: text("payment_instructions"),
+  
+      createdAt: text("created_at").notNull(),
+      updatedAt: text("updated_at").notNull(),
+    },
+    (table) => [
+      index("business_payment_details_business_id_idx").on(
+        table.businessId,
+      ),
+    ],
+  );
+  
+  /* -------------------------------------------------------------------------- */
+  /* Customers                                                                  */
+  /* -------------------------------------------------------------------------- */
+  
+  export const customers = sqliteTable(
+    "customers",
+    {
+      id: integer("id").primaryKey({ autoIncrement: true }),
+  
+      businessId: integer("business_id")
+        .notNull()
+        .references(() => businesses.id, {
+          onDelete: "cascade",
+        }),
+  
+      /*
+       * PERSON | BUSINESS
+       */
+      type: text("type").notNull(),
+  
+      phone: text("phone"),
+      email: text("email"),
+  
+      address: text("address"),
+      city: text("city"),
+      state: text("state"),
+      postalCode: text("postal_code"),
+  
+      active: integer("active", {
+        mode: "boolean",
+      })
+        .notNull()
+        .default(true),
+  
+      createdAt: text("created_at").notNull(),
+      updatedAt: text("updated_at").notNull(),
+    },
+    (table) => [
+      index("customers_business_id_idx").on(table.businessId),
+      index("customers_phone_idx").on(table.phone),
+      index("customers_email_idx").on(table.email),
+    ],
+  );
+  
+  /* -------------------------------------------------------------------------- */
+  /* Customer - Person Details                                                  */
+  /* -------------------------------------------------------------------------- */
   
   export const customerPersonDetails = sqliteTable(
     "customer_person_details",
     {
       id: integer("id").primaryKey({ autoIncrement: true }),
   
-      customerId: integer("customer_id").notNull(),
+      customerId: integer("customer_id")
+        .notNull()
+        .references(() => customers.id, {
+          onDelete: "cascade",
+        }),
   
       firstName: text("first_name").notNull(),
-  
       lastName: text("last_name"),
   
       createdAt: text("created_at").notNull(),
       updatedAt: text("updated_at").notNull(),
     },
+    (table) => [
+      index("customer_person_details_customer_id_idx").on(
+        table.customerId,
+      ),
+    ],
   );
   
-  // ─────────────────────────────────────────────
-  // Business Customer Details
-  // ─────────────────────────────────────────────
+  /* -------------------------------------------------------------------------- */
+  /* Customer - Business Details                                                */
+  /* -------------------------------------------------------------------------- */
   
   export const customerBusinessDetails = sqliteTable(
     "customer_business_details",
     {
       id: integer("id").primaryKey({ autoIncrement: true }),
   
-      customerId: integer("customer_id").notNull(),
+      customerId: integer("customer_id")
+        .notNull()
+        .references(() => customers.id, {
+          onDelete: "cascade",
+        }),
   
       businessName: text("business_name").notNull(),
   
@@ -159,161 +269,734 @@ import {
       createdAt: text("created_at").notNull(),
       updatedAt: text("updated_at").notNull(),
     },
+    (table) => [
+      index("customer_business_details_customer_id_idx").on(
+        table.customerId,
+      ),
+    ],
   );
   
-  // ─────────────────────────────────────────────
-  // Product Categories
-  // ─────────────────────────────────────────────
+  /* -------------------------------------------------------------------------- */
+  /* Product Categories                                                         */
+  /* -------------------------------------------------------------------------- */
   
-  export const productCategories = sqliteTable("product_categories", {
-    id: integer("id").primaryKey({ autoIncrement: true }),
+  export const productCategories = sqliteTable(
+    "product_categories",
+    {
+      id: integer("id").primaryKey({ autoIncrement: true }),
   
-    businessId: integer("business_id").notNull(),
+      businessId: integer("business_id")
+        .notNull()
+        .references(() => businesses.id, {
+          onDelete: "cascade",
+        }),
   
-    name: text("name").notNull(),
+      name: text("name").notNull(),
   
-    createdAt: text("created_at").notNull(),
-  });
+      createdAt: text("created_at").notNull(),
+    },
+    (table) => [
+      index("product_categories_business_id_idx").on(
+        table.businessId,
+      ),
+    ],
+  );
   
-  // ─────────────────────────────────────────────
-  // Products
-  // ─────────────────────────────────────────────
+  /* -------------------------------------------------------------------------- */
+  /* Products                                                                   */
+  /* -------------------------------------------------------------------------- */
   
-  export const products = sqliteTable("products", {
-    id: integer("id").primaryKey({ autoIncrement: true }),
+  export const products = sqliteTable(
+    "products",
+    {
+      id: integer("id").primaryKey({ autoIncrement: true }),
   
-    businessId: integer("business_id").notNull(),
+      businessId: integer("business_id")
+        .notNull()
+        .references(() => businesses.id, {
+          onDelete: "cascade",
+        }),
   
-    categoryId: integer("category_id"),
+      categoryId: integer("category_id").references(
+        () => productCategories.id,
+        {
+          onDelete: "set null",
+        },
+      ),
   
-    name: text("name").notNull(),
+      name: text("name").notNull(),
   
-    unit: text("unit").notNull(),
+      /*
+       * Examples:
+       * kg
+       * litre
+       * piece
+       * box
+       * packet
+       */
+      unit: text("unit").notNull(),
   
-    sellingPrice: real("selling_price").notNull(),
+      /*
+       * Money is stored in minor currency units.
+       *
+       * Example:
+       * ₹125.50 -> 12550
+       */
+      sellingPrice: integer("selling_price").notNull(),
   
-    purchasePrice: real("purchase_price"),
+      purchasePrice: integer("purchase_price"),
   
-    currentStock: real("current_stock").notNull().default(0),
+      /*
+       * Quantity / stock can contain decimals.
+       *
+       * Examples:
+       * 0.5 kg
+       * 1.5 litre
+       */
+      currentStock: real("current_stock").notNull().default(0),
   
-    lowStockThreshold: real("low_stock_threshold"),
+      lowStockThreshold: real("low_stock_threshold"),
   
-    taxRate: real("tax_rate").default(0),
+      /*
+       * Stored as a percentage.
+       *
+       * Example:
+       * 5 = 5%
+       * 18 = 18%
+       */
+      taxRate: real("tax_rate").default(0),
   
-    active: integer("active", {
-      mode: "boolean",
-    })
-      .notNull()
-      .default(true),
+      active: integer("active", {
+        mode: "boolean",
+      })
+        .notNull()
+        .default(true),
   
-    createdAt: text("created_at").notNull(),
-    updatedAt: text("updated_at").notNull(),
-  });
+      createdAt: text("created_at").notNull(),
+      updatedAt: text("updated_at").notNull(),
+    },
+    (table) => [
+      index("products_business_id_idx").on(table.businessId),
+      index("products_category_id_idx").on(table.categoryId),
+    ],
+  );
   
-  // ─────────────────────────────────────────────
-  // Daily Entries
-  // ─────────────────────────────────────────────
+  /* -------------------------------------------------------------------------- */
+  /* Daily Entries                                                              */
+  /* -------------------------------------------------------------------------- */
   
-  export const dailyEntries = sqliteTable("daily_entries", {
-    id: integer("id").primaryKey({ autoIncrement: true }),
+  export const dailyEntries = sqliteTable(
+    "daily_entries",
+    {
+      id: integer("id").primaryKey({ autoIncrement: true }),
   
-    businessId: integer("business_id").notNull(),
+      businessId: integer("business_id")
+        .notNull()
+        .references(() => businesses.id, {
+          onDelete: "cascade",
+        }),
   
-    customerId: integer("customer_id").notNull(),
+      customerId: integer("customer_id")
+        .notNull()
+        .references(() => customers.id, {
+          onDelete: "restrict",
+        }),
   
-    entryDate: text("entry_date").notNull(),
+      entryDate: text("entry_date").notNull(),
   
-    subtotal: real("subtotal").notNull().default(0),
+      /*
+       * Money stored in minor currency units.
+       */
+      subtotal: integer("subtotal").notNull().default(0),
+      discount: integer("discount").notNull().default(0),
+      tax: integer("tax").notNull().default(0),
+      total: integer("total").notNull().default(0),
   
-    discount: real("discount").notNull().default(0),
+      /*
+       * UNPAID | PARTIAL | PAID
+       */
+      paymentStatus: text("payment_status")
+        .notNull()
+        .default("UNPAID"),
   
-    tax: real("tax").notNull().default(0),
+      notes: text("notes"),
   
-    total: real("total").notNull().default(0),
+      createdAt: text("created_at").notNull(),
+      updatedAt: text("updated_at").notNull(),
+    },
+    (table) => [
+      index("daily_entries_business_id_idx").on(table.businessId),
+      index("daily_entries_customer_id_idx").on(table.customerId),
+      index("daily_entries_entry_date_idx").on(table.entryDate),
+    ],
+  );
   
-    paymentStatus: text("payment_status")
-      .notNull()
-      .default("UNPAID"),
+  /* -------------------------------------------------------------------------- */
+  /* Daily Entry Items                                                          */
+  /* -------------------------------------------------------------------------- */
   
-    notes: text("notes"),
+  export const dailyEntryItems = sqliteTable(
+    "daily_entry_items",
+    {
+      id: integer("id").primaryKey({ autoIncrement: true }),
   
-    createdAt: text("created_at").notNull(),
-    updatedAt: text("updated_at").notNull(),
-  });
+      entryId: integer("entry_id")
+        .notNull()
+        .references(() => dailyEntries.id, {
+          onDelete: "cascade",
+        }),
   
-  // ─────────────────────────────────────────────
-  // Daily Entry Items
-  // ─────────────────────────────────────────────
+      productId: integer("product_id")
+        .notNull()
+        .references(() => products.id, {
+          onDelete: "restrict",
+        }),
   
-  export const dailyEntryItems = sqliteTable("daily_entry_items", {
-    id: integer("id").primaryKey({ autoIncrement: true }),
+      quantity: real("quantity").notNull(),
   
-    entryId: integer("entry_id").notNull(),
+      unitPrice: integer("unit_price").notNull(),
   
-    productId: integer("product_id").notNull(),
+      taxRate: real("tax_rate").default(0),
   
-    quantity: real("quantity").notNull(),
+      total: integer("total").notNull(),
   
-    unitPrice: real("unit_price").notNull(),
+      createdAt: text("created_at").notNull(),
+    },
+    (table) => [
+      index("daily_entry_items_entry_id_idx").on(table.entryId),
+      index("daily_entry_items_product_id_idx").on(table.productId),
+    ],
+  );
   
-    taxRate: real("tax_rate").default(0),
+  /* -------------------------------------------------------------------------- */
+  /* Invoices                                                                   */
+  /* -------------------------------------------------------------------------- */
   
-    total: real("total").notNull(),
+  export const invoices = sqliteTable(
+    "invoices",
+    {
+      id: integer("id").primaryKey({ autoIncrement: true }),
   
-    createdAt: text("created_at").notNull(),
-  });
+      businessId: integer("business_id")
+        .notNull()
+        .references(() => businesses.id, {
+          onDelete: "cascade",
+        }),
   
-  // ─────────────────────────────────────────────
-  // Invoices
-  // ─────────────────────────────────────────────
+      customerId: integer("customer_id")
+        .notNull()
+        .references(() => customers.id, {
+          onDelete: "restrict",
+        }),
   
-  export const invoices = sqliteTable("invoices", {
-    id: integer("id").primaryKey({ autoIncrement: true }),
+      entryId: integer("entry_id")
+        .notNull()
+        .references(() => dailyEntries.id, {
+          onDelete: "restrict",
+        }),
   
-    businessId: integer("business_id").notNull(),
+      invoiceNumber: text("invoice_number").notNull(),
   
-    customerId: integer("customer_id").notNull(),
+      invoiceDate: text("invoice_date").notNull(),
   
-    entryId: integer("entry_id").notNull(),
+      subtotal: integer("subtotal").notNull(),
+      discount: integer("discount").notNull().default(0),
+      tax: integer("tax").notNull().default(0),
+      total: integer("total").notNull(),
   
-    invoiceNumber: text("invoice_number").notNull(),
+      /*
+       * UNPAID | PARTIAL | PAID
+       */
+      status: text("status").notNull().default("UNPAID"),
   
-    invoiceDate: text("invoice_date").notNull(),
+      /*
+       * Payment information snapshot.
+       *
+       * If the business changes its bank/QR details later,
+       * existing invoices remain unchanged.
+       */
+      paymentBankName: text("payment_bank_name"),
+      paymentAccountName: text("payment_account_name"),
+      paymentAccountNumber: text("payment_account_number"),
+      paymentBranchName: text("payment_branch_name"),
+      paymentRoutingCode: text("payment_routing_code"),
+      paymentIdentifier: text("payment_identifier"),
+      paymentQrImagePath: text("payment_qr_image_path"),
+      paymentInstructions: text("payment_instructions"),
   
-    subtotal: real("subtotal").notNull(),
+      showPaymentBankDetails: integer(
+        "show_payment_bank_details",
+        {
+          mode: "boolean",
+        },
+      )
+        .notNull()
+        .default(true),
   
-    discount: real("discount").notNull().default(0),
+      showPaymentQr: integer("show_payment_qr", {
+        mode: "boolean",
+      })
+        .notNull()
+        .default(true),
   
-    tax: real("tax").notNull().default(0),
+      createdAt: text("created_at").notNull(),
+      updatedAt: text("updated_at").notNull(),
+    },
+    (table) => [
+      index("invoices_business_id_idx").on(table.businessId),
+      index("invoices_customer_id_idx").on(table.customerId),
+      index("invoices_entry_id_idx").on(table.entryId),
+      index("invoices_invoice_date_idx").on(table.invoiceDate),
+    ],
+  );
   
-    total: real("total").notNull(),
+  /* -------------------------------------------------------------------------- */
+  /* Invoice Items                                                              */
+  /* -------------------------------------------------------------------------- */
   
-    status: text("status").notNull().default("UNPAID"),
+  export const invoiceItems = sqliteTable(
+    "invoice_items",
+    {
+      id: integer("id").primaryKey({ autoIncrement: true }),
   
-    createdAt: text("created_at").notNull(),
-    updatedAt: text("updated_at").notNull(),
-  });
+      invoiceId: integer("invoice_id")
+        .notNull()
+        .references(() => invoices.id, {
+          onDelete: "cascade",
+        }),
   
-  // ─────────────────────────────────────────────
-  // Payments
-  // ─────────────────────────────────────────────
+      productId: integer("product_id")
+        .notNull()
+        .references(() => products.id, {
+          onDelete: "restrict",
+        }),
   
-  export const payments = sqliteTable("payments", {
-    id: integer("id").primaryKey({ autoIncrement: true }),
+      /*
+       * Product snapshot.
+       *
+       * Existing invoices remain correct even if the
+       * product name or price changes later.
+       */
+      productName: text("product_name").notNull(),
   
-    businessId: integer("business_id").notNull(),
+      unit: text("unit").notNull(),
   
-    invoiceId: integer("invoice_id").notNull(),
+      quantity: real("quantity").notNull(),
   
-    amount: real("amount").notNull(),
+      unitPrice: integer("unit_price").notNull(),
   
-    paymentMethod: text("payment_method").notNull(),
+      taxRate: real("tax_rate").default(0),
   
-    paymentDate: text("payment_date").notNull(),
+      total: integer("total").notNull(),
   
-    reference: text("reference"),
+      createdAt: text("created_at").notNull(),
+    },
+    (table) => [
+      index("invoice_items_invoice_id_idx").on(table.invoiceId),
+      index("invoice_items_product_id_idx").on(table.productId),
+    ],
+  );
   
-    notes: text("notes"),
+  /* -------------------------------------------------------------------------- */
+  /* Payments                                                                   */
+  /* -------------------------------------------------------------------------- */
   
-    createdAt: text("created_at").notNull(),
-  });
+  export const payments = sqliteTable(
+    "payments",
+    {
+      id: integer("id").primaryKey({ autoIncrement: true }),
+  
+      businessId: integer("business_id")
+        .notNull()
+        .references(() => businesses.id, {
+          onDelete: "cascade",
+        }),
+  
+      invoiceId: integer("invoice_id")
+        .notNull()
+        .references(() => invoices.id, {
+          onDelete: "restrict",
+        }),
+  
+      amount: integer("amount").notNull(),
+  
+      /*
+       * CASH
+       * BANK_TRANSFER
+       * CARD
+       * OTHER
+       */
+      paymentMethod: text("payment_method").notNull(),
+  
+      paymentDate: text("payment_date").notNull(),
+  
+      reference: text("reference"),
+  
+      notes: text("notes"),
+  
+      createdAt: text("created_at").notNull(),
+    },
+    (table) => [
+      index("payments_business_id_idx").on(table.businessId),
+      index("payments_invoice_id_idx").on(table.invoiceId),
+      index("payments_payment_date_idx").on(table.paymentDate),
+    ],
+  );
+  
+  /* -------------------------------------------------------------------------- */
+  /* Suppliers                                                                  */
+  /* -------------------------------------------------------------------------- */
+  
+  export const suppliers = sqliteTable(
+    "suppliers",
+    {
+      id: integer("id").primaryKey({ autoIncrement: true }),
+  
+      businessId: integer("business_id")
+        .notNull()
+        .references(() => businesses.id, {
+          onDelete: "cascade",
+        }),
+  
+      name: text("name").notNull(),
+  
+      contactPerson: text("contact_person"),
+  
+      phone: text("phone"),
+      email: text("email"),
+  
+      taxRegistrationNumber: text(
+        "tax_registration_number",
+      ),
+  
+      address: text("address"),
+      city: text("city"),
+      state: text("state"),
+      postalCode: text("postal_code"),
+  
+      notes: text("notes"),
+  
+      active: integer("active", {
+        mode: "boolean",
+      })
+        .notNull()
+        .default(true),
+  
+      createdAt: text("created_at").notNull(),
+      updatedAt: text("updated_at").notNull(),
+    },
+    (table) => [
+      index("suppliers_business_id_idx").on(table.businessId),
+      index("suppliers_phone_idx").on(table.phone),
+    ],
+  );
+  
+  /* -------------------------------------------------------------------------- */
+  /* Expense Categories                                                         */
+  /* -------------------------------------------------------------------------- */
+  
+  export const expenseCategories = sqliteTable(
+    "expense_categories",
+    {
+      id: integer("id").primaryKey({ autoIncrement: true }),
+  
+      businessId: integer("business_id")
+        .notNull()
+        .references(() => businesses.id, {
+          onDelete: "cascade",
+        }),
+  
+      name: text("name").notNull(),
+  
+      active: integer("active", {
+        mode: "boolean",
+      })
+        .notNull()
+        .default(true),
+  
+      createdAt: text("created_at").notNull(),
+    },
+    (table) => [
+      index("expense_categories_business_id_idx").on(
+        table.businessId,
+      ),
+    ],
+  );
+  
+  /* -------------------------------------------------------------------------- */
+  /* Expenses                                                                   */
+  /* -------------------------------------------------------------------------- */
+  
+  export const expenses = sqliteTable(
+    "expenses",
+    {
+      id: integer("id").primaryKey({ autoIncrement: true }),
+  
+      businessId: integer("business_id")
+        .notNull()
+        .references(() => businesses.id, {
+          onDelete: "cascade",
+        }),
+  
+      categoryId: integer("category_id").references(
+        () => expenseCategories.id,
+        {
+          onDelete: "set null",
+        },
+      ),
+  
+      expenseDate: text("expense_date").notNull(),
+  
+      description: text("description").notNull(),
+  
+      amount: integer("amount").notNull(),
+  
+      /*
+       * CASH
+       * BANK_TRANSFER
+       * CARD
+       * OTHER
+       */
+      paymentMethod: text("payment_method").notNull(),
+  
+      reference: text("reference"),
+  
+      notes: text("notes"),
+  
+      createdAt: text("created_at").notNull(),
+      updatedAt: text("updated_at").notNull(),
+    },
+    (table) => [
+      index("expenses_business_id_idx").on(table.businessId),
+      index("expenses_category_id_idx").on(table.categoryId),
+      index("expenses_expense_date_idx").on(table.expenseDate),
+    ],
+  );
+  
+  /* -------------------------------------------------------------------------- */
+  /* Stock Purchases                                                            */
+  /* -------------------------------------------------------------------------- */
+  
+  export const stockPurchases = sqliteTable(
+    "stock_purchases",
+    {
+      id: integer("id").primaryKey({ autoIncrement: true }),
+  
+      businessId: integer("business_id")
+        .notNull()
+        .references(() => businesses.id, {
+          onDelete: "cascade",
+        }),
+  
+      supplierId: integer("supplier_id").references(
+        () => suppliers.id,
+        {
+          onDelete: "set null",
+        },
+      ),
+  
+      purchaseDate: text("purchase_date").notNull(),
+  
+      purchaseNumber: text("purchase_number"),
+  
+      subtotal: integer("subtotal").notNull().default(0),
+  
+      tax: integer("tax").notNull().default(0),
+  
+      total: integer("total").notNull().default(0),
+  
+      /*
+       * UNPAID | PARTIAL | PAID
+       */
+      paymentStatus: text("payment_status")
+        .notNull()
+        .default("UNPAID"),
+  
+      paymentMethod: text("payment_method"),
+  
+      paymentDate: text("payment_date"),
+  
+      paymentReference: text("payment_reference"),
+  
+      notes: text("notes"),
+  
+      createdAt: text("created_at").notNull(),
+      updatedAt: text("updated_at").notNull(),
+    },
+    (table) => [
+      index("stock_purchases_business_id_idx").on(
+        table.businessId,
+      ),
+      index("stock_purchases_supplier_id_idx").on(
+        table.supplierId,
+      ),
+      index("stock_purchases_purchase_date_idx").on(
+        table.purchaseDate,
+      ),
+    ],
+  );
+  
+  /* -------------------------------------------------------------------------- */
+  /* Stock Purchase Items                                                       */
+  /* -------------------------------------------------------------------------- */
+  
+  export const stockPurchaseItems = sqliteTable(
+    "stock_purchase_items",
+    {
+      id: integer("id").primaryKey({ autoIncrement: true }),
+  
+      purchaseId: integer("purchase_id")
+        .notNull()
+        .references(() => stockPurchases.id, {
+          onDelete: "cascade",
+        }),
+  
+      productId: integer("product_id")
+        .notNull()
+        .references(() => products.id, {
+          onDelete: "restrict",
+        }),
+  
+      /*
+       * Product snapshot.
+       */
+      productName: text("product_name").notNull(),
+  
+      unit: text("unit").notNull(),
+  
+      quantity: real("quantity").notNull(),
+  
+      unitPrice: integer("unit_price").notNull(),
+  
+      taxRate: real("tax_rate").default(0),
+  
+      total: integer("total").notNull(),
+  
+      createdAt: text("created_at").notNull(),
+    },
+    (table) => [
+      index("stock_purchase_items_purchase_id_idx").on(
+        table.purchaseId,
+      ),
+      index("stock_purchase_items_product_id_idx").on(
+        table.productId,
+      ),
+    ],
+  );
+  
+  /* -------------------------------------------------------------------------- */
+  /* Workers                                                                    */
+  /* -------------------------------------------------------------------------- */
+  
+  export const workers = sqliteTable(
+    "workers",
+    {
+      id: integer("id").primaryKey({ autoIncrement: true }),
+  
+      businessId: integer("business_id")
+        .notNull()
+        .references(() => businesses.id, {
+          onDelete: "cascade",
+        }),
+  
+      name: text("name").notNull(),
+  
+      phone: text("phone"),
+  
+      email: text("email"),
+  
+      role: text("role"),
+  
+      joiningDate: text("joining_date"),
+  
+      /*
+       * MONTHLY
+       * WEEKLY
+       * DAILY
+       * HOURLY
+       * OTHER
+       */
+      paymentType: text("payment_type"),
+  
+      defaultPaymentAmount: integer(
+        "default_payment_amount",
+      ),
+  
+      address: text("address"),
+  
+      notes: text("notes"),
+  
+      active: integer("active", {
+        mode: "boolean",
+      })
+        .notNull()
+        .default(true),
+  
+      createdAt: text("created_at").notNull(),
+      updatedAt: text("updated_at").notNull(),
+    },
+    (table) => [
+      index("workers_business_id_idx").on(table.businessId),
+      index("workers_phone_idx").on(table.phone),
+    ],
+  );
+  
+  /* -------------------------------------------------------------------------- */
+  /* Worker Payments                                                            */
+  /* -------------------------------------------------------------------------- */
+  
+  export const workerPayments = sqliteTable(
+    "worker_payments",
+    {
+      id: integer("id").primaryKey({ autoIncrement: true }),
+  
+      businessId: integer("business_id")
+        .notNull()
+        .references(() => businesses.id, {
+          onDelete: "cascade",
+        }),
+  
+      workerId: integer("worker_id")
+        .notNull()
+        .references(() => workers.id, {
+          onDelete: "restrict",
+        }),
+  
+      paymentDate: text("payment_date").notNull(),
+  
+      /*
+       * Useful for monthly / weekly payment tracking.
+       *
+       * Example:
+       * 2026-09
+       */
+      paymentPeriod: text("payment_period"),
+  
+      amount: integer("amount").notNull(),
+  
+      /*
+       * CASH
+       * BANK_TRANSFER
+       * CARD
+       * OTHER
+       */
+      paymentMethod: text("payment_method").notNull(),
+  
+      reference: text("reference"),
+  
+      notes: text("notes"),
+  
+      createdAt: text("created_at").notNull(),
+    },
+    (table) => [
+      index("worker_payments_business_id_idx").on(
+        table.businessId,
+      ),
+      index("worker_payments_worker_id_idx").on(
+        table.workerId,
+      ),
+      index("worker_payments_payment_date_idx").on(
+        table.paymentDate,
+      ),
+    ],
+  );

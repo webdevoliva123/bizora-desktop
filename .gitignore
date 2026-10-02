@@ -6,6 +6,9 @@ data/
 # Electron build output
 electron-dist/
 
+# Bizora user files
+business-files/
+
 # Environment variables
 .env
 .env.local
