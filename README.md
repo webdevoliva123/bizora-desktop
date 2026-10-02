@@ -1,7 +1,7 @@
 # Bizora
 
 <p align="center">
-  <img src="platform-assets/platform-logo.png" alt="Bizora" width="220" />
+  <img src="./public/platform-assets/platform-logo.png" alt="Bizora" width="220" />
 </p>
 
 > **Your Business, Simplified.**
@@ -512,7 +512,7 @@ GitHub supports images directly inside Markdown. Bizora can use repository asset
 Example:
 
 ```md
-![Bizora](platform-assets/platform-logo.png)
+![Bizora](.public/platform-assets/platform-logo.png)
 ```
 
 The repository currently keeps platform branding under:
