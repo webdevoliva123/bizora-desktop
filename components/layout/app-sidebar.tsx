@@ -29,6 +29,9 @@ import {
     SidebarRail,
 } from "@/components/ui/sidebar";
 import { BRAND, PLATFORM } from "@/lib/constant/platfrom-details";
+import { useEffect, useState } from "react";
+import { BusinessBasicDetails } from "@/lib/types/business";
+import { getFileUrl } from "@/lib/files/urls";
 
 
 
@@ -84,6 +87,25 @@ import { BRAND, PLATFORM } from "@/lib/constant/platfrom-details";
 export function AppSidebar() {
   const pathname = usePathname();
 
+  const [business, setBusiness] =
+  useState<BusinessBasicDetails | null>(null);
+
+  useEffect(() => {
+    async function loadBusiness() {
+      const response = await fetch("/api/business/basic-details");
+
+      if (!response.ok) {
+        return;
+      }
+
+      const result = await response.json();
+
+      setBusiness(result.data);
+    }
+
+    loadBusiness();
+  }, []);
+
   const isActive = (href: string) =>
     pathname === href || pathname.startsWith(`${href}/`);
 
@@ -94,11 +116,11 @@ export function AppSidebar() {
         <SidebarMenu>
           <SidebarMenuItem>
               <Link href="/dashboard">
-            <SidebarMenuButton size="lg" tooltip={BRAND.name}>
+            <SidebarMenuButton size="lg" tooltip={business?.name}>
                 <div className="flex aspect-square size-8 items-center justify-center overflow-hidden rounded-md border bg-background">
                   <img
-                    src={PLATFORM.logo}
-                    alt={`${BRAND.name} logo`}
+                    src={getFileUrl(business?.logoPath || "") || ""}
+                    alt={`${business?.name} logo`}
                     width={32}
                     height={32}
                     className="size-8 object-contain"
@@ -106,7 +128,7 @@ export function AppSidebar() {
                 </div>
                 <div className="grid flex-1 text-left leading-tight">
                   <span className="truncate text-sm font-semibold">
-                    {BRAND.name}
+                    {business?.name}
                   </span>
                  
                 </div>
