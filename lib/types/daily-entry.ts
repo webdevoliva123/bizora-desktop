@@ -61,3 +61,53 @@ export interface DailyEntryDetail {
 
     payments: DailyEntryDetailPayment[];
 }
+
+export interface DailyEntryBill {
+    business: {
+      id: number;
+      name: string;
+      logoPath: string | null;
+      businessType: string;
+      businessCategory: string | null;
+      country: string;
+      currency: string;
+      phone: string | null;
+      email: string | null;
+      address: string | null;
+      city: string | null;
+      state: string | null;
+      postalCode: string | null;
+    };
+  
+    customer: {
+      id: number;
+      name: string;
+      type: "PERSON" | "BUSINESS";
+    };
+  
+    entry: DailyEntryDetail;
+  
+    paymentDetails: {
+      bankName: string | null;
+      accountName: string | null;
+      accountNumber: string | null;
+      branchName: string | null;
+      routingCode: string | null;
+      paymentIdentifier: string | null;
+      qrImagePath: string | null;
+      showBankDetails: boolean;
+      showQr: boolean;
+      paymentInstructions: string | null;
+    } | null;
+  
+    taxRegistrations: {
+      taxSystem: string;
+      registrationNumber: string | null;
+    }[];
+  
+    businessRegistrations: {
+      authorityName: string;
+      registrationType: string;
+      registrationNumber: string | null;
+    }[];
+  }

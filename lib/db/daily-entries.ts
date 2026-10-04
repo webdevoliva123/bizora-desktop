@@ -11,9 +11,13 @@ import {
     dailyEntryItems,
     products,
     dailyEntryPayments,
+    businessPaymentDetails,
+    businesses,
+    taxRegistrations,
+    businessRegistrations,
 } from "@/lib/db/schema";
 
-import type { DailyEntryDetail, DailyEntryListItem } from "@/lib/types/daily-entry";
+import type { DailyEntryBill, DailyEntryDetail, DailyEntryListItem } from "@/lib/types/daily-entry";
 
 export function getDailyEntries(
     businessId: number,
@@ -260,7 +264,7 @@ export function getDailyEntryById(
             eq(dailyEntryItems.entryId, entryId),
         )
         .all();
-        
+
     const payments = db
         .select({
             id: dailyEntryPayments.id,
@@ -338,4 +342,145 @@ export function getDailyEntryById(
 
         payments,
     };
+}
+
+export function getDailyEntryBill(
+    businessId: number,
+    entryId: number,
+): DailyEntryBill | null {
+    const entry = getDailyEntryById(
+        businessId,
+        entryId,
+    );
+
+    if (!entry) {
+        return null;
+    }
+
+    const business = db
+        .select({
+            id: businesses.id,
+            name: businesses.name,
+            logoPath: businesses.logoPath,
+            businessType: businesses.businessType,
+            businessCategory: businesses.businessCategory,
+            country: businesses.country,
+            currency: businesses.currency,
+            phone: businesses.phone,
+            email: businesses.email,
+            address: businesses.address,
+            city: businesses.city,
+            state: businesses.state,
+            postalCode: businesses.postalCode,
+        })
+        .from(businesses)
+        .where(
+            and(
+                eq(businesses.id, businessId),
+                eq(businesses.setupCompleted, true),
+            ),
+        )
+        .get();
+
+    if (!business) {
+        return null;
+    }
+
+    const paymentDetails = db
+        .select({
+            bankName: businessPaymentDetails.bankName,
+            accountName: businessPaymentDetails.accountName,
+            accountNumber: businessPaymentDetails.accountNumber,
+            branchName: businessPaymentDetails.branchName,
+            routingCode: businessPaymentDetails.routingCode,
+            paymentIdentifier: businessPaymentDetails.paymentIdentifier,
+            qrImagePath: businessPaymentDetails.qrImagePath,
+            showBankDetails: businessPaymentDetails.showBankDetails,
+            showQr: businessPaymentDetails.showQr,
+            paymentInstructions:
+                businessPaymentDetails.paymentInstructions,
+        })
+        .from(businessPaymentDetails)
+        .where(
+            eq(
+                businessPaymentDetails.businessId,
+                businessId,
+            ),
+        )
+        .orderBy(desc(businessPaymentDetails.id))
+        .limit(1)
+        .get();
+
+    const taxRegistrationRows = db
+        .select({
+            taxSystem: taxRegistrations.taxSystem,
+            registrationNumber:
+                taxRegistrations.registrationNumber,
+        })
+        .from(taxRegistrations)
+        .where(
+            and(
+                eq(taxRegistrations.businessId, businessId),
+                eq(taxRegistrations.isRegistered, true),
+            ),
+        )
+        .orderBy(desc(taxRegistrations.id))
+        .all();
+
+    const businessRegistrationRows = db
+        .select({
+            authorityName:
+                businessRegistrations.authorityName,
+            registrationType:
+                businessRegistrations.registrationType,
+            registrationNumber:
+                businessRegistrations.registrationNumber,
+        })
+        .from(businessRegistrations)
+        .where(
+            eq(
+                businessRegistrations.businessId,
+                businessId,
+            ),
+        )
+        .orderBy(desc(businessRegistrations.id))
+        .all();
+
+        return {
+            business,
+          
+            customer: {
+              id: entry.customerId,
+              name: entry.customerName,
+              type: entry.customerType,
+            },
+          
+            entry,
+          
+            paymentDetails: paymentDetails
+              ? {
+                  bankName: paymentDetails.bankName,
+                  accountName: paymentDetails.accountName,
+                  accountNumber:
+                    paymentDetails.accountNumber,
+                  branchName: paymentDetails.branchName,
+                  routingCode:
+                    paymentDetails.routingCode,
+                  paymentIdentifier:
+                    paymentDetails.paymentIdentifier,
+                  qrImagePath:
+                    paymentDetails.qrImagePath,
+                  showBankDetails:
+                    paymentDetails.showBankDetails,
+                  showQr: paymentDetails.showQr,
+                  paymentInstructions:
+                    paymentDetails.paymentInstructions,
+                }
+              : null,
+          
+            taxRegistrations: taxRegistrationRows,
+          
+            businessRegistrations:
+              businessRegistrationRows,
+          };
 }

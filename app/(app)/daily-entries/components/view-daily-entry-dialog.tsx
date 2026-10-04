@@ -73,6 +73,7 @@ import {
   type PaymentMethod,
 } from "./payment-options";
 import { SearchSelect } from "./search-select";
+import { DailyEntryBillPreview } from "@/app/(app)/daily-entries/components/daily-entry-bill-preview"
 
 /* -------------------------------------------------------------------------- */
 /* Types + helpers                                                            */
@@ -336,6 +337,8 @@ export function ViewDailyEntryDialog({
   const [payDate, setPayDate] = useState(todayKey);
   const [payReference, setPayReference] = useState("");
   const [payNotes, setPayNotes] = useState("");
+  const [billPreviewOpen, setBillPreviewOpen] =
+  useState(false);
 
   /* ---- Always start in view mode for a new entry / re-open ---- */
   useEffect(() => {
@@ -658,7 +661,7 @@ export function ViewDailyEntryDialog({
             </DialogTitle>
             <DialogDescription>
               {entryId !== null
-                ? `Entry #${entryId}${current ? ` · ${current.customerName}` : ""}`
+                ? `${current ? ` ${current.customerName} |` : ""} en-${entryId}`
                 : "Review the details of this entry."}
             </DialogDescription>
           </DialogHeader>
@@ -1300,8 +1303,7 @@ export function ViewDailyEntryDialog({
                     type="button"
                     variant="outline"
                     onClick={() => {
-                      // Print will be implemented next.
-                      console.log("Print daily entry:", current.id);
+                        setBillPreviewOpen(true);
                     }}
                   >
                     <Printer />
@@ -1407,6 +1409,11 @@ export function ViewDailyEntryDialog({
           </AlertDialogFooter>
         </AlertDialogContent>
       </AlertDialog>
+      <DailyEntryBillPreview
+  entryId={current?.id ?? null}
+  open={billPreviewOpen}
+  onOpenChange={setBillPreviewOpen}
+/>
     </>
   );
 }

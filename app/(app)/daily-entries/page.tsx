@@ -50,10 +50,11 @@ export default async function DailyEntriesPage() {
 
             <section className="mt-6">
                 <DailyEntriesTable
+                
                     entries={entries}
                     currency={business.currency}
-                    customers={[]}
-                    products={[]}
+                    customers={customers}
+                    products={products}
                 />
             </section>
         </PageContainer>
