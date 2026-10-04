@@ -718,6 +718,67 @@ export const dailyEntryPayments = sqliteTable(
       index("payments_payment_date_idx").on(table.paymentDate),
     ],
   );
+
+  export const monthlyAccountPayments = sqliteTable(
+    "monthly_account_payments",
+    {
+      id: integer("id").primaryKey({ autoIncrement: true }),
+  
+      businessId: integer("business_id")
+        .notNull()
+        .references(() => businesses.id, {
+          onDelete: "cascade",
+        }),
+  
+      customerId: integer("customer_id")
+        .notNull()
+        .references(() => customers.id, {
+          onDelete: "cascade",
+        }),
+  
+      /**
+       * Account month in YYYY-MM format.
+       *
+       * Example:
+       * 2026-09
+       */
+      accountMonth: text("account_month").notNull(),
+  
+      amount: integer("amount").notNull(),
+  
+      paymentMethod: text("payment_method").notNull(),
+  
+      paymentDate: text("payment_date").notNull(),
+  
+      reference: text("reference"),
+  
+      notes: text("notes"),
+  
+      createdAt: text("created_at")
+        .notNull()
+        .$defaultFn(() => new Date().toISOString()),
+  
+      updatedAt: text("updated_at")
+        .notNull()
+        .$defaultFn(() => new Date().toISOString()),
+    },
+    (table) => ({
+      businessCustomerMonthIdx: index(
+        "monthly_account_payments_business_customer_month_idx",
+      ).on(
+        table.businessId,
+        table.customerId,
+        table.accountMonth,
+      ),
+  
+      customerMonthIdx: index(
+        "monthly_account_payments_customer_month_idx",
+      ).on(
+        table.customerId,
+        table.accountMonth,
+      ),
+    }),
+  );
   
   /* -------------------------------------------------------------------------- */
   /* Suppliers                                                                  */
