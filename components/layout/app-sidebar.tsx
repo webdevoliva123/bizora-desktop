@@ -32,6 +32,7 @@ import { BRAND, PLATFORM } from "@/lib/constant/platfrom-details";
 import { useEffect, useState } from "react";
 import { BusinessBasicDetails } from "@/lib/types/business";
 import { getFileUrl } from "@/lib/files/urls";
+import { useBusiness } from "@/hooks/use-business";
 
 
 
@@ -86,25 +87,7 @@ import { getFileUrl } from "@/lib/files/urls";
 
 export function AppSidebar() {
   const pathname = usePathname();
-
-  const [business, setBusiness] =
-  useState<BusinessBasicDetails | null>(null);
-
-  useEffect(() => {
-    async function loadBusiness() {
-      const response = await fetch("/api/business/basic-details");
-
-      if (!response.ok) {
-        return;
-      }
-
-      const result = await response.json();
-
-      setBusiness(result.data);
-    }
-
-    loadBusiness();
-  }, []);
+  const { business, loading } = useBusiness();
 
   const isActive = (href: string) =>
     pathname === href || pathname.startsWith(`${href}/`);
@@ -116,7 +99,7 @@ export function AppSidebar() {
         <SidebarMenu>
           <SidebarMenuItem>
               <Link href="/dashboard">
-            <SidebarMenuButton size="lg" tooltip={business?.name}>
+            {!loading  && <SidebarMenuButton size="lg" tooltip={business?.name}>
                 <div className="flex aspect-square size-8 items-center justify-center overflow-hidden rounded-md border bg-background">
                   <img
                     src={getFileUrl(business?.logoPath || "") || ""}
@@ -132,7 +115,7 @@ export function AppSidebar() {
                   </span>
                  
                 </div>
-            </SidebarMenuButton>
+            </SidebarMenuButton>}
               </Link>
           </SidebarMenuItem>
         </SidebarMenu>

@@ -471,6 +471,61 @@ import {
   );
   
   /* -------------------------------------------------------------------------- */
+/* Daily Entry Payments                                                       */
+/* -------------------------------------------------------------------------- */
+
+export const dailyEntryPayments = sqliteTable(
+    "daily_entry_payments",
+    {
+      id: integer("id").primaryKey({ autoIncrement: true }),
+  
+      businessId: integer("business_id")
+        .notNull()
+        .references(() => businesses.id, {
+          onDelete: "cascade",
+        }),
+  
+      entryId: integer("entry_id")
+        .notNull()
+        .references(() => dailyEntries.id, {
+          onDelete: "cascade",
+        }),
+  
+      amount: integer("amount").notNull(),
+  
+      /*
+       * CASH
+       * BANK_TRANSFER
+       * CARD
+       * OTHER
+       */
+      paymentMethod: text("payment_method").notNull(),
+  
+      paymentDate: text("payment_date").notNull(),
+  
+      reference: text("reference"),
+  
+      notes: text("notes"),
+  
+      createdAt: text("created_at").notNull(),
+    },
+    (table) => [
+      index("daily_entry_payments_business_id_idx").on(
+        table.businessId,
+      ),
+  
+      index("daily_entry_payments_entry_id_idx").on(
+        table.entryId,
+      ),
+  
+      index("daily_entry_payments_payment_date_idx").on(
+        table.paymentDate,
+      ),
+    ],
+  );
+
+  
+  /* -------------------------------------------------------------------------- */
   /* Invoices                                                                   */
   /* -------------------------------------------------------------------------- */
   
