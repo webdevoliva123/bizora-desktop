@@ -406,15 +406,31 @@ import {
   
       entryDate: text("entry_date").notNull(),
   
-      /*
+      /**
        * Money stored in minor currency units.
        */
       subtotal: integer("subtotal").notNull().default(0),
+  
       discount: integer("discount").notNull().default(0),
+  
       tax: integer("tax").notNull().default(0),
+  
       total: integer("total").notNull().default(0),
   
-      /*
+      /**
+       * IMMEDIATE | MONTHLY
+       *
+       * IMMEDIATE:
+       * Payment is handled against this individual entry.
+       *
+       * MONTHLY:
+       * This entry becomes part of the customer's monthly account.
+       */
+      paymentType: text("payment_type")
+        .notNull()
+        .default("IMMEDIATE"),
+  
+      /**
        * UNPAID | PARTIAL | PAID
        */
       paymentStatus: text("payment_status")
@@ -424,12 +440,15 @@ import {
       notes: text("notes"),
   
       createdAt: text("created_at").notNull(),
+  
       updatedAt: text("updated_at").notNull(),
     },
+  
     (table) => [
       index("daily_entries_business_id_idx").on(table.businessId),
       index("daily_entries_customer_id_idx").on(table.customerId),
       index("daily_entries_entry_date_idx").on(table.entryDate),
+      index("daily_entries_payment_type_idx").on(table.paymentType),
     ],
   );
   
@@ -524,7 +543,7 @@ export const dailyEntryPayments = sqliteTable(
     ],
   );
 
-  
+
   /* -------------------------------------------------------------------------- */
   /* Invoices                                                                   */
   /* -------------------------------------------------------------------------- */

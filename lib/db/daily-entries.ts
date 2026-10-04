@@ -23,78 +23,80 @@ export function getDailyEntries(
             id: dailyEntries.id,
             entryDate: dailyEntries.entryDate,
             createdAt: dailyEntries.createdAt,
+
             customerType: sql<"PERSON" | "BUSINESS">`
-                UPPER(${customers.type})
-            `,
+            UPPER(${customers.type})
+        `,
 
             customerName: sql<string>`
-                COALESCE(
-                    NULLIF(
-                        TRIM(
-                            COALESCE(${customerPersonDetails.firstName}, '') ||
-                            ' ' ||
-                            COALESCE(${customerPersonDetails.lastName}, '')
-                        ),
-                        ''
+            COALESCE(
+                NULLIF(
+                    TRIM(
+                        COALESCE(${customerPersonDetails.firstName}, '') ||
+                        ' ' ||
+                        COALESCE(${customerPersonDetails.lastName}, '')
                     ),
-                    NULLIF(${customerBusinessDetails.businessName}, ''),
-                    'Unknown Customer'
-                )
-            `,
+                    ''
+                ),
+                NULLIF(${customerBusinessDetails.businessName}, ''),
+                'Unknown Customer'
+            )
+        `,
 
             itemCount: sql<number>`
-                COUNT(${dailyEntryItems.id})
-            `,
+            COUNT(${dailyEntryItems.id})
+        `,
 
             total: dailyEntries.total,
 
-            // Total amount actually paid for this entry
+            paymentType: sql<"IMMEDIATE" | "MONTHLY">`
+            ${dailyEntries.paymentType}
+        `,
+
             paidAmount: sql<number>`
-                COALESCE(
+            COALESCE(
+                (
+                    SELECT SUM(${dailyEntryPayments.amount})
+                    FROM ${dailyEntryPayments}
+                    WHERE ${dailyEntryPayments.entryId} = ${dailyEntries.id}
+                ),
+                0
+            )
+        `,
+
+            paymentCount: sql<number>`
+            (
+                SELECT COUNT(${dailyEntryPayments.id})
+                FROM ${dailyEntryPayments}
+                WHERE ${dailyEntryPayments.entryId} = ${dailyEntries.id}
+            )
+        `,
+
+            paymentStatus: sql<"UNPAID" | "PARTIAL" | "PAID">`
+            CASE
+                WHEN COALESCE(
                     (
                         SELECT SUM(${dailyEntryPayments.amount})
                         FROM ${dailyEntryPayments}
                         WHERE ${dailyEntryPayments.entryId} = ${dailyEntries.id}
                     ),
                     0
-                )
-            `,
-
-            // Number of payment transactions
-            paymentCount: sql<number>`
-                (
-                    SELECT COUNT(${dailyEntryPayments.id})
-                    FROM ${dailyEntryPayments}
-                    WHERE ${dailyEntryPayments.entryId} = ${dailyEntries.id}
-                )
-            `,
-
-            // Derive status from actual payment history
-            paymentStatus: sql<"UNPAID" | "PARTIAL" | "PAID">`
-                CASE
-                    WHEN COALESCE(
-                        (
-                            SELECT SUM(${dailyEntryPayments.amount})
-                            FROM ${dailyEntryPayments}
-                            WHERE ${dailyEntryPayments.entryId} = ${dailyEntries.id}
-                        ),
-                        0
-                    ) <= 0
-                    THEN 'UNPAID'
-
-                    WHEN COALESCE(
-                        (
-                            SELECT SUM(${dailyEntryPayments.amount})
-                            FROM ${dailyEntryPayments}
-                            WHERE ${dailyEntryPayments.entryId} = ${dailyEntries.id}
-                        ),
-                        0
-                    ) >= ${dailyEntries.total}
-                    THEN 'PAID'
-
-                    ELSE 'PARTIAL'
-                END
-            `,
+                ) <= 0
+                THEN 'UNPAID'
+    
+                WHEN COALESCE(
+                    (
+                        SELECT SUM(${dailyEntryPayments.amount})
+                        FROM ${dailyEntryPayments}
+                        WHERE ${dailyEntryPayments.entryId} = ${dailyEntries.id}
+                    ),
+                    0
+                ) >= ${dailyEntries.total}
+                THEN 'PAID'
+    
+                ELSE 'PARTIAL'
+            END
+        `,
         })
         .from(dailyEntries)
         .innerJoin(
@@ -130,6 +132,7 @@ export function getDailyEntries(
             dailyEntries.entryDate,
             dailyEntries.createdAt,
             dailyEntries.total,
+            dailyEntries.paymentType,
             customers.id,
             customers.type,
             customerPersonDetails.firstName,
@@ -151,16 +154,13 @@ export function getDailyEntries(
         id: entry.id,
         entryDate: entry.entryDate,
         createdAt: entry.createdAt,
-    
         customerName: entry.customerName,
         customerType: entry.customerType,
         itemCount: Number(entry.itemCount),
-    
         total: entry.total,
-    
+        paymentType: entry.paymentType,
         paidAmount: Number(entry.paidAmount ?? 0),
         paymentCount: Number(entry.paymentCount ?? 0),
-    
         paymentStatus: entry.paymentStatus,
     }));
 }
@@ -175,32 +175,35 @@ export function getDailyEntryById(
             entryDate: dailyEntries.entryDate,
 
             customerId: customers.id,
+
             customerType: sql<"PERSON" | "BUSINESS">`
-                  UPPER(${customers.type})
-                `,
+                UPPER(${customers.type})
+            `,
 
             customerName: sql<string>`
-                  COALESCE(
+                COALESCE(
                     NULLIF(
-                      TRIM(
-                        COALESCE(${customerPersonDetails.firstName}, '') ||
-                        ' ' ||
-                        COALESCE(${customerPersonDetails.lastName}, '')
-                      ),
-                      ''
+                        TRIM(
+                            COALESCE(${customerPersonDetails.firstName}, '') ||
+                            ' ' ||
+                            COALESCE(${customerPersonDetails.lastName}, '')
+                        ),
+                        ''
                     ),
                     NULLIF(${customerBusinessDetails.businessName}, ''),
                     'Unknown Customer'
-                  )
-                `,
+                )
+            `,
 
             subtotal: dailyEntries.subtotal,
             discount: dailyEntries.discount,
             tax: dailyEntries.tax,
             total: dailyEntries.total,
-            paymentStatus: sql<"UNPAID" | "PARTIAL" | "PAID">`
-  UPPER(${dailyEntries.paymentStatus})
-`,
+
+            paymentType: sql<"IMMEDIATE" | "MONTHLY">`
+                UPPER(${dailyEntries.paymentType})
+            `,
+
             notes: dailyEntries.notes,
         })
         .from(dailyEntries)
@@ -223,31 +226,14 @@ export function getDailyEntryById(
             ),
         )
         .where(
-            eq(dailyEntries.id, entryId),
+            and(
+                eq(dailyEntries.id, entryId),
+                eq(dailyEntries.businessId, businessId),
+            ),
         )
         .get();
 
     if (!entry) {
-        return null;
-    }
-
-    /*
-     * Make sure the entry belongs to the requested business.
-     */
-    const belongsToBusiness = db
-    .select({
-      id: dailyEntries.id,
-    })
-    .from(dailyEntries)
-    .where(
-      and(
-        eq(dailyEntries.id, entryId),
-        eq(dailyEntries.businessId, businessId),
-      ),
-    )
-    .get();
-
-    if (!belongsToBusiness) {
         return null;
     }
 
@@ -274,12 +260,16 @@ export function getDailyEntryById(
             eq(dailyEntryItems.entryId, entryId),
         )
         .all();
-
+        
     const payments = db
         .select({
             id: dailyEntryPayments.id,
             amount: dailyEntryPayments.amount,
-            paymentMethod: dailyEntryPayments.paymentMethod,
+
+            paymentMethod: sql<
+                "CASH" | "BANK_TRANSFER" | "CARD" | "OTHER"
+            >`${dailyEntryPayments.paymentMethod}`,
+
             paymentDate: dailyEntryPayments.paymentDate,
             reference: dailyEntryPayments.reference,
             notes: dailyEntryPayments.notes,
@@ -290,6 +280,7 @@ export function getDailyEntryById(
         )
         .orderBy(
             desc(dailyEntryPayments.paymentDate),
+            desc(dailyEntryPayments.id),
         )
         .all();
 
@@ -302,6 +293,16 @@ export function getDailyEntryById(
         entry.total - paidAmount,
         0,
     );
+
+    let paymentStatus: "UNPAID" | "PARTIAL" | "PAID";
+
+    if (paidAmount <= 0) {
+        paymentStatus = "UNPAID";
+    } else if (paidAmount >= entry.total) {
+        paymentStatus = "PAID";
+    } else {
+        paymentStatus = "PARTIAL";
+    }
 
     return {
         id: entry.id,
@@ -316,7 +317,8 @@ export function getDailyEntryById(
         tax: entry.tax,
         total: entry.total,
 
-        paymentStatus: entry.paymentStatus,
+        paymentType: entry.paymentType,
+        paymentStatus,
 
         paidAmount,
         outstandingAmount,

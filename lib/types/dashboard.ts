@@ -6,13 +6,24 @@ export interface DashboardSummary {
   }
 
   export interface DashboardRecentTransaction {
-    id: number;
-    invoiceNumber: string;
-    customerName: string;
-    total: number;
-    status: string;
-    invoiceDate: string;
-  }
+    id: string;
+
+    type: "CREDIT" | "DEBIT";
+
+    category:
+        | "SALE"
+        | "PAYMENT"
+        | "EXPENSE"
+        | "STOCK_PURCHASE";
+
+    title: string;
+
+    description: string;
+
+    amount: number;
+
+    transactionDate: string;
+}
 
   export interface DashboardSalesOverview {
     date: string;

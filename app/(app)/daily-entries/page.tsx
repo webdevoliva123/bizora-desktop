@@ -52,6 +52,8 @@ export default async function DailyEntriesPage() {
                 <DailyEntriesTable
                     entries={entries}
                     currency={business.currency}
+                    customers={[]}
+                    products={[]}
                 />
             </section>
         </PageContainer>

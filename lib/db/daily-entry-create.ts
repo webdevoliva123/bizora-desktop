@@ -14,27 +14,18 @@ import {
 export interface CreateDailyEntryInput {
     businessId: number;
     customerId: number;
-  
-    paymentStatus:
-      | "UNPAID"
-      | "PARTIAL"
-      | "PAID";
-  
+    paymentType: "IMMEDIATE" | "MONTHLY";
+    paymentStatus: "UNPAID" | "PARTIAL" | "PAID";
     paymentAmount: number;
-  
     paymentMethod:
       | "CASH"
       | "BANK_TRANSFER"
       | "CARD"
       | "OTHER"
       | null;
-  
     paymentDate: string | null;
-  
     paymentReference: string | null;
-  
     notes: string | null;
-  
     items: {
       productId: number;
       quantity: number;
@@ -299,11 +290,12 @@ export function createDailyEntry(
             discount,
             tax,
             total,
+            paymentType: input.paymentType,
             paymentStatus: "UNPAID",
             notes: input.notes,
             createdAt: now,
             updatedAt: now,
-          })
+        })
           .returning({
             id: dailyEntries.id,
           })

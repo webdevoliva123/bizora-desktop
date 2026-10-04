@@ -47,6 +47,7 @@ import {
   PopoverContent,
   PopoverTrigger,
 } from "@/components/ui/popover";
+import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
 import {
   Select,
   SelectContent,
@@ -78,12 +79,14 @@ interface EntryItem {
   quantity: string;
 }
 
+type PaymentType = "IMMEDIATE" | "MONTHLY";
 type PaymentStatus = "UNPAID" | "PARTIAL" | "PAID";
 type PaymentMethod = "CASH" | "BANK_TRANSFER" | "CARD" | "OTHER";
 
 interface Draft {
   customerId: number | null;
   items: EntryItem[];
+  paymentType: PaymentType;
   paymentStatus: PaymentStatus;
   paymentAmount: string; // rupees, as typed (only used for PARTIAL)
   paymentMethod: PaymentMethod;
@@ -94,8 +97,26 @@ interface Draft {
 
 const DRAFT_KEY = "bizora:add-daily-entry";
 
+const DEFAULT_PAYMENT_TYPE: PaymentType = "IMMEDIATE";
 const DEFAULT_PAYMENT_STATUS: PaymentStatus = "UNPAID";
 const DEFAULT_PAYMENT_METHOD: PaymentMethod = "CASH";
+
+const PAYMENT_TYPE_OPTIONS: {
+  value: PaymentType;
+  label: string;
+  description: string;
+}[] = [
+  {
+    value: "IMMEDIATE",
+    label: "Immediate",
+    description: "Customer pays now, fully or partly.",
+  },
+  {
+    value: "MONTHLY",
+    label: "Monthly",
+    description: "Added to the customer's monthly account.",
+  },
+];
 
 const PAYMENT_OPTIONS: { value: PaymentStatus; label: string }[] = [
   { value: "UNPAID", label: "Unpaid" },
@@ -122,12 +143,18 @@ const PAYMENT_METHOD_OPTIONS: {
   { value: "OTHER", label: "Other", referenceHint: "Optional" },
 ];
 
+const paymentTypeLabel = (type: PaymentType) =>
+  PAYMENT_TYPE_OPTIONS.find((option) => option.value === type)?.label ?? type;
+
 const paymentLabel = (status: PaymentStatus) =>
   PAYMENT_OPTIONS.find((option) => option.value === status)?.label ?? status;
 
 const methodLabel = (method: PaymentMethod) =>
   PAYMENT_METHOD_OPTIONS.find((option) => option.value === method)?.label ??
   method;
+
+const isPaymentType = (value: unknown): value is PaymentType =>
+  PAYMENT_TYPE_OPTIONS.some((option) => option.value === value);
 
 const isPaymentStatus = (value: unknown): value is PaymentStatus =>
   PAYMENT_OPTIONS.some((option) => option.value === value);
@@ -181,6 +208,9 @@ function readDraft(): Draft | null {
           productId: typeof item.productId === "number" ? item.productId : null,
           quantity: typeof item.quantity === "string" ? item.quantity : "",
         })),
+      paymentType: isPaymentType(parsed.paymentType)
+        ? parsed.paymentType
+        : DEFAULT_PAYMENT_TYPE,
       paymentStatus: isPaymentStatus(parsed.paymentStatus)
         ? parsed.paymentStatus
         : DEFAULT_PAYMENT_STATUS,
@@ -319,6 +349,9 @@ export function AddDailyEntryDialog({
   const [open, setOpen] = useState(false);
   const [customerId, setCustomerId] = useState<number | null>(null);
   const [items, setItems] = useState<EntryItem[]>(() => [createItem()]);
+  const [paymentType, setPaymentType] = useState<PaymentType>(
+    DEFAULT_PAYMENT_TYPE,
+  );
   const [paymentStatus, setPaymentStatus] = useState<PaymentStatus>(
     DEFAULT_PAYMENT_STATUS,
   );
@@ -334,6 +367,9 @@ export function AddDailyEntryDialog({
   const [isSaving, setIsSaving] = useState(false);
   const [saveError, setSaveError] = useState<string | null>(null);
 
+  const isImmediate = paymentType === "IMMEDIATE";
+  const isMonthly = paymentType === "MONTHLY";
+
   /* ---- Calculations (declared before anything that reads `summary`) ---- */
   const lines = useMemo(
     () =>
@@ -342,7 +378,9 @@ export function AddDailyEntryDialog({
         if (!product) return { itemId: item.id, subtotal: 0, tax: 0, total: 0 };
 
         const quantity = Number(item.quantity) || 0;
-        const subtotal = quantity * product.sellingPrice;
+
+        // Rounded per line, exactly like the server, so "Paid" amounts match
+        const subtotal = Math.round(quantity * product.sellingPrice);
         const tax = Math.round((subtotal * (product.taxRate ?? 0)) / 100);
 
         return { itemId: item.id, subtotal, tax, total: subtotal + tax };
@@ -364,12 +402,13 @@ export function AddDailyEntryDialog({
   );
 
   /* ---- Payment (all in paise). PAID is derived from the total, never stored,
-         so it can't go stale when products change ---- */
+         so it can't go stale when products change. Monthly records nothing. ---- */
   const totalPaise = summary.total;
   const enteredPaise = Math.round((Number(paymentAmount) || 0) * 100);
 
-  const paidPaise =
-    paymentStatus === "PAID"
+  const paidPaise = !isImmediate
+    ? 0
+    : paymentStatus === "PAID"
       ? totalPaise
       : paymentStatus === "PARTIAL"
         ? enteredPaise
@@ -377,11 +416,14 @@ export function AddDailyEntryDialog({
 
   const balancePaise = Math.max(totalPaise - paidPaise, 0);
 
+  const showPaymentDetails = isImmediate && paymentStatus !== "UNPAID";
+
   const hasValidPaymentDate =
     DATE_KEY_PATTERN.test(paymentDate) && paymentDate <= todayKey();
 
   let paymentAmountError: string | null = null;
   if (
+    isImmediate &&
     paymentStatus === "PARTIAL" &&
     paymentAmount !== "" &&
     totalPaise > 0
@@ -395,6 +437,7 @@ export function AddDailyEntryDialog({
   }
 
   const paymentValid =
+    isMonthly ||
     paymentStatus === "UNPAID" ||
     (hasValidPaymentDate &&
       (paymentStatus === "PAID"
@@ -416,6 +459,7 @@ export function AddDailyEntryDialog({
 
       setCustomerId(validCustomer ? draft.customerId : null);
       setItems(validItems.length > 0 ? validItems : [createItem()]);
+      setPaymentType(draft.paymentType);
       setPaymentStatus(draft.paymentStatus);
       setPaymentAmount(draft.paymentAmount);
       setPaymentMethod(draft.paymentMethod);
@@ -435,6 +479,7 @@ export function AddDailyEntryDialog({
   const hasDraft =
     customerId !== null ||
     hasProductData ||
+    paymentType !== DEFAULT_PAYMENT_TYPE ||
     paymentStatus !== DEFAULT_PAYMENT_STATUS ||
     notes.trim() !== "";
 
@@ -445,6 +490,7 @@ export function AddDailyEntryDialog({
       writeDraft({
         customerId,
         items,
+        paymentType,
         paymentStatus,
         paymentAmount,
         paymentMethod,
@@ -460,6 +506,7 @@ export function AddDailyEntryDialog({
     hasDraft,
     customerId,
     items,
+    paymentType,
     paymentStatus,
     paymentAmount,
     paymentMethod,
@@ -505,6 +552,7 @@ export function AddDailyEntryDialog({
   function clearAllDetails() {
     setCustomerId(null);
     setItems([createItem()]);
+    setPaymentType(DEFAULT_PAYMENT_TYPE);
     setPaymentStatus(DEFAULT_PAYMENT_STATUS);
     setPaymentAmount("");
     setPaymentMethod(DEFAULT_PAYMENT_METHOD);
@@ -526,15 +574,17 @@ export function AddDailyEntryDialog({
     setSaveError(null);
 
     try {
-      const isUnpaid = paymentStatus === "UNPAID";
+      // Monthly entries and unpaid immediate entries record no payment
+      const recordsPayment = isImmediate && paymentStatus !== "UNPAID";
 
       const payload = {
         customerId,
-        paymentStatus,
-        paymentAmount: isUnpaid ? 0 : paidPaise,
-        paymentMethod: isUnpaid ? null : paymentMethod,
-        paymentDate: isUnpaid ? null : paymentDate,
-        paymentReference: isUnpaid ? null : paymentReference.trim() || null,
+        paymentType,
+        paymentStatus: isMonthly ? ("UNPAID" as const) : paymentStatus,
+        paymentAmount: recordsPayment ? paidPaise : 0,
+        paymentMethod: recordsPayment ? paymentMethod : null,
+        paymentDate: recordsPayment ? paymentDate : null,
+        paymentReference: recordsPayment ? paymentReference.trim() || null : null,
         notes: notes.trim() || null,
         items: items.map((item) => ({
           productId: item.productId,
@@ -832,32 +882,84 @@ export function AddDailyEntryDialog({
               )}
             </div>
 
-            {/* Payment status */}
+            {/* Payment type */}
             <div className="flex flex-col gap-2">
-              <Label>Payment Status</Label>
-              <Select
-                value={paymentStatus}
+              <Label id="payment-type-label">Payment Type</Label>
+
+              <RadioGroup
+                aria-labelledby="payment-type-label"
+                value={paymentType}
                 onValueChange={(value) => {
-                  if (isPaymentStatus(value)) handlePaymentStatusChange(value);
+                  if (isPaymentType(value)) setPaymentType(value);
                 }}
+                className="grid gap-3 sm:grid-cols-2"
               >
-                <SelectTrigger className="w-full">
-                  <SelectValue placeholder="Select payment status">
-                    {paymentLabel(paymentStatus)}
-                  </SelectValue>
-                </SelectTrigger>
-                <SelectContent>
-                  {PAYMENT_OPTIONS.map((option) => (
-                    <SelectItem key={option.value} value={option.value}>
-                      {option.label}
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
+                {PAYMENT_TYPE_OPTIONS.map((option) => (
+                  <Label
+                    key={option.value}
+                    htmlFor={`payment-type-${option.value}`}
+                    className={cn(
+                      "flex cursor-pointer items-start gap-3 rounded-lg border p-3 font-normal transition-colors",
+                      "hover:bg-muted/40",
+                      "has-[[aria-checked=true]]:border-primary has-[[aria-checked=true]]:bg-primary/5",
+                    )}
+                  >
+                    <RadioGroupItem
+                      id={`payment-type-${option.value}`}
+                      value={option.value}
+                      className="mt-0.5"
+                    />
+                    <span className="flex flex-col gap-0.5">
+                      <span className="text-sm font-medium">{option.label}</span>
+                      <span className="text-xs text-muted-foreground">
+                        {option.description}
+                      </span>
+                    </span>
+                  </Label>
+                ))}
+              </RadioGroup>
             </div>
 
-            {/* Payment details (Paid / Partial only) */}
-            {paymentStatus !== "UNPAID" && (
+            {/* Payment status (Immediate only) */}
+            {isImmediate && (
+              <div className="flex flex-col gap-2">
+                <Label>Payment Status</Label>
+                <Select
+                  value={paymentStatus}
+                  onValueChange={(value) => {
+                    if (isPaymentStatus(value)) handlePaymentStatusChange(value);
+                  }}
+                >
+                  <SelectTrigger className="w-full">
+                    <SelectValue placeholder="Select payment status">
+                      {paymentLabel(paymentStatus)}
+                    </SelectValue>
+                  </SelectTrigger>
+                  <SelectContent>
+                    {PAYMENT_OPTIONS.map((option) => (
+                      <SelectItem key={option.value} value={option.value}>
+                        {option.label}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
+            )}
+
+            {/* Monthly note */}
+            {isMonthly && (
+              <div className="rounded-lg border border-dashed bg-muted/30 px-4 py-3">
+                <p className="text-sm font-medium">Billed on the monthly account</p>
+                <p className="mt-0.5 text-xs text-muted-foreground">
+                  This entry is saved as unpaid and added to
+                  {selectedCustomer ? ` ${selectedCustomer.name}'s` : " the customer's"}{" "}
+                  monthly account. No payment is recorded now.
+                </p>
+              </div>
+            )}
+
+            {/* Payment details (Immediate + Paid / Partial only) */}
+            {showPaymentDetails && (
               <div className="space-y-4 rounded-lg border p-4">
                 <div>
                   <p className="text-sm font-medium">Payment Details</p>
@@ -1023,7 +1125,7 @@ export function AddDailyEntryDialog({
                 </dd>
               </div>
 
-              {paymentStatus !== "UNPAID" && (
+              {showPaymentDetails && (
                 <>
                   <div>
                     <dt className="text-xs text-muted-foreground">Paid</dt>
@@ -1036,7 +1138,7 @@ export function AddDailyEntryDialog({
                     <dd
                       className={cn(
                         "font-medium tabular-nums",
-                        balancePaise > 0 && "text-red-600 dark:text-red-400",
+                        balancePaise > 0 && "text-red-600 ",
                       )}
                     >
                       ₹{formatAmount(balancePaise)}
@@ -1100,11 +1202,18 @@ export function AddDailyEntryDialog({
                 <dd className="font-medium">{items.length}</dd>
               </div>
               <div className="flex justify-between gap-4">
-                <dt className="text-muted-foreground">Payment status</dt>
-                <dd className="font-medium">{paymentLabel(paymentStatus)}</dd>
+                <dt className="text-muted-foreground">Payment type</dt>
+                <dd className="font-medium">{paymentTypeLabel(paymentType)}</dd>
               </div>
 
-              {paymentStatus !== "UNPAID" && (
+              {isImmediate && (
+                <div className="flex justify-between gap-4">
+                  <dt className="text-muted-foreground">Payment status</dt>
+                  <dd className="font-medium">{paymentLabel(paymentStatus)}</dd>
+                </div>
+              )}
+
+              {showPaymentDetails && (
                 <>
                   <div className="flex justify-between gap-4">
                     <dt className="text-muted-foreground">Amount paid</dt>
@@ -1143,13 +1252,20 @@ export function AddDailyEntryDialog({
                 </dd>
               </div>
 
-              {balancePaise > 0 && (
-                <div className="flex justify-between gap-4">
-                  <dt className="text-muted-foreground">Outstanding</dt>
-                  <dd className="font-medium text-red-600 tabular-nums dark:text-red-400">
-                    ₹{formatAmount(balancePaise)}
-                  </dd>
-                </div>
+              {isMonthly ? (
+                <p className="pt-1 text-xs text-muted-foreground">
+                  Added to the customer's monthly account. No payment is
+                  recorded now.
+                </p>
+              ) : (
+                balancePaise > 0 && (
+                  <div className="flex justify-between gap-4">
+                    <dt className="text-muted-foreground">Outstanding</dt>
+                    <dd className="font-medium text-red-600 tabular-nums ">
+                      ₹{formatAmount(balancePaise)}
+                    </dd>
+                  </div>
+                )
               )}
             </dl>
           )}

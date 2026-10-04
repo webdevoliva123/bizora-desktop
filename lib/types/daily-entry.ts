@@ -7,10 +7,9 @@ export interface DailyEntryListItem {
     customerType: "PERSON" | "BUSINESS";
     itemCount: number;
     total: number;
-
+    paymentType: "IMMEDIATE" | "MONTHLY";
     paidAmount: number;
     paymentCount: number;
-
     paymentStatus: "UNPAID" | "PARTIAL" | "PAID";
 }
 
@@ -25,35 +24,40 @@ export interface DailyEntryListItem {
     total: number;
   }
   
+
+  
+  
   export interface DailyEntryDetailPayment {
     id: number;
     amount: number;
-    paymentMethod: string;
+    paymentMethod: "CASH" | "BANK_TRANSFER" | "CARD" | "OTHER";
     paymentDate: string;
     reference: string | null;
     notes: string | null;
-  }
-  
-  export interface DailyEntryDetail {
+}
+
+export interface DailyEntryDetail {
     id: number;
     entryDate: string;
-  
+
     customerId: number;
     customerName: string;
     customerType: "PERSON" | "BUSINESS";
-  
+
     subtotal: number;
     discount: number;
     tax: number;
     total: number;
-  
+
+    paymentType: "IMMEDIATE" | "MONTHLY";
     paymentStatus: "UNPAID" | "PARTIAL" | "PAID";
-  
+
     paidAmount: number;
     outstandingAmount: number;
-  
+
     notes: string | null;
-  
+
     items: DailyEntryDetailItem[];
+
     payments: DailyEntryDetailPayment[];
-  }
+}

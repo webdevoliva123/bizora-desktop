@@ -1,26 +1,16 @@
 
 "use client";
 
-import { useEffect, useMemo, useState } from "react";
 import {
     CalendarIcon,
     ChevronLeft,
     ChevronRight,
-    MoreHorizontal,
-    Pencil,
-    Trash2,
 } from "lucide-react";
+import { useEffect, useMemo, useState } from "react";
 
-import { cn } from "@/lib/utils";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Calendar } from "@/components/ui/calendar";
-import {
-    DropdownMenu,
-    DropdownMenuContent,
-    DropdownMenuItem,
-    DropdownMenuTrigger,
-} from "@/components/ui/dropdown-menu";
 import {
     Popover,
     PopoverContent,
@@ -42,6 +32,7 @@ import {
     TableHeader,
     TableRow,
 } from "@/components/ui/table";
+import { cn } from "@/lib/utils";
 
 import type { DailyEntryListItem } from "@/lib/types/daily-entry";
 import { ViewDailyEntryDialog } from "./view-daily-entry-dialog";
@@ -174,19 +165,22 @@ const PAYMENT_STYLES: Record<string, { label: string; className: string }> = {
     PAID: {
         label: "Paid",
         className:
-            "border-transparent bg-emerald-100 text-emerald-700 dark:bg-emerald-950 dark:text-emerald-300",
+            "border-transparent bg-emerald-100 text-emerald-700 ",
     },
     PARTIAL: {
         label: "Partial",
         className:
-            "border-transparent bg-amber-100 text-amber-700 dark:bg-amber-950 dark:text-amber-300",
+            "border-transparent bg-amber-100 text-amber-700 ",
     },
     UNPAID: {
         label: "Unpaid",
         className:
-            "border-transparent bg-red-100 text-red-700 dark:bg-red-950 dark:text-red-300",
+            "border-transparent bg-red-100 text-red-700 ",
     },
 };
+
+const MONTHLY_BADGE =
+    "border-transparent bg-sky-100 text-sky-700 ";
 
 /* -------------------------------------------------------------------------- */
 /* Component                                                                  */
@@ -195,11 +189,22 @@ const PAYMENT_STYLES: Record<string, { label: string; className: string }> = {
 interface DailyEntriesTableProps {
     entries: DailyEntryListItem[];
     currency: string;
+    /** Same lists you pass to AddDailyEntryDialog (used by the edit mode) */
+    customers: { id: number; name: string }[];
+    products: {
+        id: number;
+        name: string;
+        unit: string;
+        sellingPrice: number; // paise
+        taxRate: number | null;
+    }[];
 }
 
 export function DailyEntriesTable({
     entries,
     currency,
+    customers,
+    products,
 }: DailyEntriesTableProps) {
     // Client-only values are set after mount to avoid SSR/timezone mismatches
     const [today, setToday] = useState("");
@@ -207,11 +212,8 @@ export function DailyEntriesTable({
     const [customerType, setCustomerType] = useState<CustomerTypeFilter>("ALL");
     const [hydrated, setHydrated] = useState(false);
     const [calendarOpen, setCalendarOpen] = useState(false);
-    const [viewEntryId, setViewEntryId] =
-        useState<number | null>(null);
-
-    const [viewEntryOpen, setViewEntryOpen] =
-        useState(false);
+    const [viewEntryId, setViewEntryId] = useState<number | null>(null);
+    const [viewEntryOpen, setViewEntryOpen] = useState(false);
 
     /* ---- Restore filters once on mount ---- */
     useEffect(() => {
@@ -250,6 +252,11 @@ export function DailyEntriesTable({
         selectDate(toDateKey(next));
     }
 
+    function openEntry(entryId: number) {
+        setViewEntryId(entryId);
+        setViewEntryOpen(true);
+    }
+
     /* ---- Filtered list ---- */
     const filteredEntries = useMemo(
         () =>
@@ -277,11 +284,7 @@ export function DailyEntriesTable({
     );
 
     const totalPaidAmount = useMemo(
-        () =>
-            filteredEntries.reduce(
-                (sum, entry) => sum + entry.paidAmount,
-                0,
-            ),
+        () => filteredEntries.reduce((sum, entry) => sum + entry.paidAmount, 0),
         [filteredEntries],
     );
 
@@ -389,38 +392,15 @@ export function DailyEntriesTable({
                 <Table>
                     <TableHeader>
                         <TableRow>
-                            <TableHead className="w-12 px-4">
-                                #
-                            </TableHead>
-
-                            <TableHead className="px-4">
-                                Entry Date & Time
-                            </TableHead>
-                            <TableHead className="px-4">
-                                Customer
-                            </TableHead>
-
-                            <TableHead className="px-4">
-                                Items
-                            </TableHead>
-
-                            <TableHead className="px-4 text-right">
-                                Total
-                            </TableHead>
-
-                            <TableHead className="px-4 text-right">
-                                Paid Amount
-                            </TableHead>
-
-                            <TableHead className="px-4 text-center">
-                                Payments
-                            </TableHead>
-
-                            <TableHead className="px-4">
-                                Payment Status
-                            </TableHead>
-
-                            <TableHead className="w-12 px-4" />
+                            <TableHead className="w-12 px-4">#</TableHead>
+                            <TableHead className="px-4">Entry Date & Time</TableHead>
+                            <TableHead className="px-4">Customer</TableHead>
+                            <TableHead className="px-4">Items</TableHead>
+                            <TableHead className="px-4">Payment Type</TableHead>
+                            <TableHead className="px-4 text-right">Total</TableHead>
+                            <TableHead className="px-4 text-right">Paid Amount</TableHead>
+                            <TableHead className="px-4 text-center">Payments</TableHead>
+                            <TableHead className="px-4">Payment Status</TableHead>
                         </TableRow>
                     </TableHeader>
 
@@ -439,21 +419,31 @@ export function DailyEntriesTable({
                                 </TableCell>
                             </TableRow>
                         ) : (
-                            filteredEntries.map((entry,index) => {
+                            filteredEntries.map((entry, index) => {
                                 const payment = PAYMENT_STYLES[entry.paymentStatus];
+                                const isMonthly = entry.paymentType === "MONTHLY";
 
                                 return (
-                                    <TableRow key={entry.id} onClick={() => {
-                                        setViewEntryId(entry.id);
-                                        setViewEntryOpen(true);
-                                    }}>
+                                    <TableRow
+                                        key={entry.id}
+                                        tabIndex={0}
+                                        className="cursor-pointer"
+                                        onClick={() => openEntry(entry.id)}
+                                        onKeyDown={(event) => {
+                                            if (event.key === "Enter" || event.key === " ") {
+                                                event.preventDefault();
+                                                openEntry(entry.id);
+                                            }
+                                        }}
+                                    >
                                         <TableCell className="px-4 text-muted-foreground tabular-nums">
                                             {index + 1}
                                         </TableCell>
 
-                                        <TableCell className="px-4 whitespace-nowrap text-sm">
+                                        <TableCell className="px-4 text-sm whitespace-nowrap">
                                             {formatDateTime(entry.createdAt)}
                                         </TableCell>
+
                                         <TableCell className="px-4">
                                             <div className="flex flex-col">
                                                 <span className="font-medium">
@@ -462,13 +452,23 @@ export function DailyEntriesTable({
                                                 <span className="text-xs text-muted-foreground">
                                                     {entry.customerType === "BUSINESS"
                                                         ? "Business"
-                                                        : "Person"}
+                                                        : "Person"}{" "}
+                                                    | en-{entry.id}
                                                 </span>
                                             </div>
                                         </TableCell>
 
                                         <TableCell className="px-4 text-muted-foreground">
                                             {entry.itemCount}
+                                        </TableCell>
+
+                                        <TableCell className="px-4">
+                                            <Badge
+                                                variant="outline"
+                                                className={isMonthly ? MONTHLY_BADGE : undefined}
+                                            >
+                                                {isMonthly ? "Monthly" : "Immediate"}
+                                            </Badge>
                                         </TableCell>
 
                                         <TableCell className="px-4 text-right font-medium tabular-nums">
@@ -484,39 +484,18 @@ export function DailyEntriesTable({
                                         </TableCell>
 
                                         <TableCell className="px-4">
-                                            <Badge
-                                                variant="outline"
-                                                className={cn(payment?.className)}
-                                            >
-                                                {payment?.label ?? entry.paymentStatus}
-                                            </Badge>
-                                        </TableCell>
-
-                                        <TableCell className="px-4">
-                                            <DropdownMenu>
-                                                <DropdownMenuTrigger
-                                                    render={
-                                                        <Button
-                                                            variant="ghost"
-                                                            size="icon"
-                                                            aria-label="Actions"
-                                                        />
-                                                    }
+                                            {isMonthly ? (
+                                                <span className="text-xs text-muted-foreground">
+                                                    On monthly account
+                                                </span>
+                                            ) : (
+                                                <Badge
+                                                    variant="outline"
+                                                    className={cn(payment?.className)}
                                                 >
-                                                    <MoreHorizontal />
-                                                </DropdownMenuTrigger>
-
-                                                <DropdownMenuContent align="end">
-                                                    <DropdownMenuItem>
-                                                        <Pencil />
-                                                        Edit
-                                                    </DropdownMenuItem>
-                                                    <DropdownMenuItem className="text-destructive focus:text-destructive">
-                                                        <Trash2 />
-                                                        Delete
-                                                    </DropdownMenuItem>
-                                                </DropdownMenuContent>
-                                            </DropdownMenu>
+                                                    {payment?.label ?? entry.paymentStatus}
+                                                </Badge>
+                                            )}
                                         </TableCell>
                                     </TableRow>
                                 );
@@ -527,14 +506,10 @@ export function DailyEntriesTable({
                     {filteredEntries.length > 0 && (
                         <TableFooter>
                             <TableRow>
-                                <TableCell
-                                    colSpan={4}
-                                    className="px-4 text-muted-foreground"
-                                >
+                                {/* #, date, customer, items, payment type */}
+                                <TableCell colSpan={5} className="px-4 text-muted-foreground">
                                     {filteredEntries.length}{" "}
-                                    {filteredEntries.length === 1
-                                        ? "entry"
-                                        : "entries"}
+                                    {filteredEntries.length === 1 ? "entry" : "entries"}
                                 </TableCell>
 
                                 <TableCell className="px-4 text-right font-semibold tabular-nums">
@@ -545,23 +520,21 @@ export function DailyEntriesTable({
                                     {formatCurrency(totalPaidAmount, currency)}
                                 </TableCell>
 
-                                <TableCell colSpan={3} />
+                                {/* payments, status */}
+                                <TableCell colSpan={2} />
                             </TableRow>
                         </TableFooter>
                     )}
                 </Table>
-                <ViewDailyEntryDialog
-                    entryId={viewEntryId}
-                    open={viewEntryOpen}
-                    onOpenChange={(open) => {
-                        setViewEntryOpen(open);
-
-                        if (!open) {
-                            setViewEntryId(null);
-                        }
-                    }}
-                />
             </div>
+
+            <ViewDailyEntryDialog
+                entryId={viewEntryId}
+                open={viewEntryOpen}
+                customers={customers}
+                products={products}
+                onOpenChange={setViewEntryOpen}
+            />
         </div>
     );
 }
