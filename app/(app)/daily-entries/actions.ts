@@ -11,6 +11,7 @@ import {
   createDailyEntry,
   type CreateDailyEntryInput,
 } from "@/lib/db/daily-entry-create";
+import { createQuickSale, QuickSalePaymentMethod } from "@/lib/db/quick-sale-create";
 
 export interface CreateDailyEntryActionInput {
     customerId: number | null;
@@ -257,5 +258,71 @@ export async function createDailyEntryAction(
       return { success: true };
     } catch (error) {
       return failure(error, "Failed to delete the daily entry.");
+    }
+  }
+
+  export interface CreateQuickSaleActionInput {
+    amount: number;
+    paymentMethod: QuickSalePaymentMethod;
+    paymentDate: string;
+    paymentReference: string | null;
+    notes: string | null;
+  }
+  
+  export async function createQuickSaleAction(
+    input: CreateQuickSaleActionInput,
+  ): Promise<
+    | { success: true; id: number }
+    | { success: false; error: string }
+  > {
+    try {
+      const businessId = await getBusinessId();
+  
+      if (!businessId) {
+        return {
+          success: false,
+          error: "Business setup is incomplete.",
+        };
+      }
+  
+      if (!Number.isInteger(input.amount) || input.amount <= 0) {
+        return {
+          success: false,
+          error: "Sale amount must be greater than zero.",
+        };
+      }
+  
+      if (!input.paymentDate) {
+        return {
+          success: false,
+          error: "Payment date is required.",
+        };
+      }
+  
+      const result = createQuickSale({
+        businessId,
+        amount: input.amount,
+        paymentMethod: input.paymentMethod,
+        paymentDate: input.paymentDate,
+        paymentReference: input.paymentReference,
+        notes: input.notes,
+      });
+  
+      revalidateDailyEntries();
+  
+      return {
+        success: true,
+        id: result.id,
+      };
+    } catch (error) {
+      console.error("[daily-entries] Failed to create quick sale:", error);
+  
+      return {
+        success: false,
+        error:
+          error instanceof Error
+            ? error.message
+            : "Failed to create quick sale.",
+      };
     }
   }

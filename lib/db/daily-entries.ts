@@ -32,20 +32,26 @@ export function getDailyEntries(
             UPPER(${customers.type})
         `,
 
-            customerName: sql<string>`
-            COALESCE(
-                NULLIF(
-                    TRIM(
-                        COALESCE(${customerPersonDetails.firstName}, '') ||
-                        ' ' ||
-                        COALESCE(${customerPersonDetails.lastName}, '')
-                    ),
-                    ''
-                ),
-                NULLIF(${customerBusinessDetails.businessName}, ''),
-                'Unknown Customer'
-            )
-        `,
+        customerName: sql<string>`
+        CASE
+          WHEN ${customers.isSystem} = 1
+            AND ${customers.systemKey} = 'WALK_IN_CUSTOMER'
+          THEN 'Quick Sale'
+      
+          ELSE COALESCE(
+            NULLIF(
+              TRIM(
+                COALESCE(${customerPersonDetails.firstName}, '') ||
+                ' ' ||
+                COALESCE(${customerPersonDetails.lastName}, '')
+              ),
+              ''
+            ),
+            NULLIF(${customerBusinessDetails.businessName}, ''),
+            'Unknown Customer'
+          )
+        END
+      `,
 
             itemCount: sql<number>`
             COUNT(${dailyEntryItems.id})

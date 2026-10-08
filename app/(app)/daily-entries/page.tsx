@@ -13,6 +13,7 @@ import {
 } from "@/lib/db/daily-entry-options";
 
 import { AddDailyEntryDialog } from "./components/add-daily-entry-dialog";
+import { QuickSaleDialog } from "./components/quick-sale-dialog";
 
 export default async function DailyEntriesPage() {
     const setupStatus = await getSetupStatus();
@@ -41,16 +42,20 @@ export default async function DailyEntriesPage() {
                 title="Daily Entries"
                 description="Record and manage your daily business entries."
                 actions={
-                    <AddDailyEntryDialog
-                        customers={customers}
-                        products={products}
-                    />
+                    <div className="flex items-center gap-2">
+                        <QuickSaleDialog />
+
+                        <AddDailyEntryDialog
+                            customers={customers}
+                            products={products}
+                        />
+                    </div>
                 }
             />
 
             <section className="mt-6">
                 <DailyEntriesTable
-                
+
                     entries={entries}
                     currency={business.currency}
                     customers={customers}

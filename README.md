@@ -1,2604 +1,805 @@
-\# Bizora
+<div align="center">
 
+<img src="./public/platform-assets/platform-logo.png" alt="Bizora" width="200" />
 
+# Bizora
 
-\<p align="center">
+**Your Business, Simplified.**
 
-&#x20; \<img src="./public/platform-assets/platform-logo.png" alt="Bizora" width="220" />
+A local-first business management and billing desktop app for small businesses.
 
-\</p>
+![Status](https://img.shields.io/badge/status-in%20development-orange)
+![Local-first](https://img.shields.io/badge/local--first-yes-brightgreen)
+![Electron](https://img.shields.io/badge/Electron-desktop-47848F?logo=electron&logoColor=white)
+![Next.js](https://img.shields.io/badge/Next.js-React-000000?logo=nextdotjs&logoColor=white)
+![TypeScript](https://img.shields.io/badge/TypeScript-3178C6?logo=typescript&logoColor=white)
+![SQLite](https://img.shields.io/badge/SQLite-Drizzle%20ORM-003B57?logo=sqlite&logoColor=white)
 
+[Overview](#-overview) ·
+[Features](#-features) ·
+[Architecture](#-architecture) ·
+[Tech Stack](#-tech-stack) ·
+[Workflows](#-workflows) ·
+[Roadmap](#-roadmap)
 
+</div>
 
-\> \*\*Your Business, Simplified.\*\*
+---
 
+## 🚀 Overview
 
+Small businesses need billing, customer management, inventory tracking and reports, but running an online application brings hosting, database and maintenance costs they don't need.
 
-Bizora is a \*\*local-first business management and billing application\*\* built for small businesses that want to manage their daily operations without depending on cloud hosting, external servers, or expensive infrastructure.
+Bizora runs **locally on the business owner's computer**. Business data and core operations stay available without a separately hosted backend or online database. The platform is also **country-aware**: each business configures its own tax, food-safety and regulatory information for its location.
 
+> **Install Bizora → Set up your business → Start managing your business.**
 
+| | |
+|---|---|
+| ✅ No server configuration | ✅ No database installation |
+| ✅ No terminal commands | ✅ No complicated deployment |
 
-Bizora runs locally on the business owner's computer, keeping business data and core operations available without requiring a separately hosted backend or online database.
+Bizora is packaged as a desktop application that can be installed and used with minimal technical setup.
 
+---
 
+## ✨ Features
 
-The platform is designed to be \*\*country-aware\*\*, allowing businesses to configure their own tax, food-safety, and regulatory information based on their location.
+| Area | What you can do |
+|---|---|
+| 🌍 [Country-aware setup](#-country-aware-business-setup) | Configure country, tax and regulatory details |
+| 👥 [Customers](#-customer-management) | Person and business customers with history |
+| 📦 [Products](#-product-management) | Products, units, pricing and inventory |
+| 📋 [Daily entries](#-daily-entries) | Record daily transactions quickly |
+| 🧾 [Billing](#-billing) | Invoices, monthly statements, print and PDF |
+| 🛒 [Stock purchases](#-stock-purchases) | Track purchases and how stock enters the business |
+| 🏢 [Suppliers](#-supplier-management) | Manage who you buy from |
+| 💸 [Expenses](#-expense-management) | Track operating costs by category |
+| 👷 [Workers](#-worker-management-and-payments) | Lightweight worker records and payments |
+| 💰 [Payments](#-payment-tracking) | Paid, unpaid, partial and outstanding balances |
+| 📊 [Reports](#-reports) | Sales, purchases, expenses and profit overview |
+| 🔐 [Backup](#-local-first-and-backup) | Local data with backup and restore |
 
+### 🌍 Country-Aware Business Setup
 
+Bizora does not hard-code country-specific requirements such as FSSAI or GSTIN. During setup, the business selects its country and configures the regulatory information relevant to it. This lets Bizora support businesses in different countries without changing the core application.
 
-\---
+Setup can include: country, business name, logo, address, city, state / region, postal code, contact information, business type, tax information, food-safety information and other business registrations.
 
+#### 🧾 Tax information
 
+Tax information is configurable rather than tied to one country's terminology.
 
-\## 🚀 Overview
+```text
+Tax System · Tax Registration Number · Tax Registered · Tax Rate
+```
 
+| Country | Tax system | Registration label |
+|---|---|---|
+| India | GST | GSTIN |
+| New Zealand | GST | GST Number |
 
+The underlying system can support additional tax systems in the future.
 
-Small businesses often need billing, customer management, inventory tracking, and business reports, but maintaining an online application can introduce unnecessary hosting, database, and maintenance costs.
+#### 🛡️ Regulatory and food-safety information
 
+Instead of hard-coding fields such as `FSSAI Number`, Bizora uses a generic structure:
 
+```text
+Authority / Department · Registration Type · Registration Number · Issue Date · Expiry Date
+```
 
-\*\*Bizora is designed to solve that problem.\*\*
+| Field | Example (Indian food business) |
+|---|---|
+| Authority | FSSAI |
+| Registration type | Food Business Licence |
+| Registration number | `XXXXXXXXXXXXXX` |
 
+A New Zealand business can configure the authority and registration details that apply to it. No product change is needed to support a new regulatory system.
 
+### 👥 Customer Management
 
-The application is packaged as a desktop application that can be installed and used locally with minimal technical setup.
+| Individual customer | Business customer |
+|---|---|
+| First and last name | Business name |
+| Phone, email | Contact person |
+| Address and location details | Phone, email |
+| Transaction history | Tax registration details |
+| | Business address |
+| | Business transaction history |
 
+### 📦 Product Management
 
+Manage products, pricing, units and inventory. Bizora starts with common dairy products (milk, curd, tofu, paneer and others), but the product system is intentionally generic so it can later support groceries, bakeries, cafes, restaurants, small retailers, wholesalers and other small businesses.
 
-The goal is simple:
+### 📋 Daily Entries
 
+Create entries, select customers, add multiple products, set quantities, calculate totals, apply discounts, track payment status and view previous entries.
 
+### 🧾 Billing
 
-\> \*\*Install Bizora → Set up your business → Start managing your business.\*\*
+Generate invoices with numbering, customer information, product details, quantities and pricing, tax calculation, discounts and payment status. Invoices can be printed or exported as PDF.
 
+**Payment details on bills.** Businesses configure their payment information once and show it on invoices: bank name, account name, account number, branch, routing / bank code, payment identifier, payment QR and payment instructions.
 
+- No payment gateway is required. The invoice shows the configured details, and customers scan the QR code or use the bank details.
+- Payment details are snapshotted on invoices, so changing them later does not alter invoices already generated.
 
-No server configuration.
+### 🛒 Stock Purchases
 
-No database installation.
+Record what the business buys from suppliers: date, supplier, products, quantity, unit price, tax, total, payment status, method, date, reference and notes. One purchase can contain multiple products.
 
-No terminal commands.
-
-No complicated deployment process.
-
-
-
-\---
-
-
-
-\## ✨ Features
-
-
-
-\### 🌍 Country-Aware Business Setup
-
-
-
-Bizora does not hard-code country-specific requirements such as FSSAI or GSTIN.
-
-
-
-During setup, the business selects its country and configures the regulatory information relevant to that country.
-
-
-
-Business setup can include:
-
-
-
-\* Country
-
-\* Business name
-
-\* Business logo
-
-\* Business address
-
-\* City
-
-\* State / Region
-
-\* Postal code
-
-\* Contact information
-
-\* Business type
-
-\* Tax information
-
-\* Food-safety information
-
-\* Other business registrations
-
-
-
-This allows Bizora to support businesses in different countries without changing the core application.
-
-
-
-\---
-
-
-
-\### 🏢 Business Setup
-
-
-
-Set up your business during the first launch.
-
-
-
-Example:
-
-
-
-\`\`\`text
-
-Business Name
-
-Business Logo
-
-Country
-
-Business Type
-
-Address
-
-City
-
-State / Region
-
-Postal Code
-
-Phone
-
-Email
-
-\`\`\`
-
-
-
-Additional information can be configured based on the selected country and business type.
-
-
-
-\---
-
-
-
-\### 🧾 Tax Information
-
-
-
-Tax information is configurable rather than tied to a single country's terminology.
-
-
-
-Example:
-
-
-
-\`\`\`text
-
-Tax System
-
-Tax Registration Number
-
-Tax Registered
-
-Tax Rate
-
-\`\`\`
-
-
-
-The application can adapt the terminology based on the business's country.
-
-
-
-For example:
-
-
-
-\`\`\`text
-
-India
-
-GST
-
-GSTIN
-
-
-
-New Zealand
-
-GST
-
-GST Number
-
-\`\`\`
-
-
-
-The underlying system is designed to support additional tax systems in the future.
-
-
-
-\---
-
-
-
-\### 🛡️ Regulatory & Food-Safety Information
-
-
-
-Businesses operating in regulated industries can configure their relevant authority and registration information.
-
-
-
-Instead of hard-coding fields such as:
-
-
-
-\`\`\`text
-
-FSSAI Number
-
-\`\`\`
-
-
-
-Bizora uses a generic structure:
-
-
-
-\`\`\`text
-
-Authority / Department
-
-Registration Type
-
-Registration Number
-
-Issue Date
-
-Expiry Date
-
-\`\`\`
-
-
-
-For example, an Indian food business may configure:
-
-
-
-\`\`\`text
-
-Authority:
-
-FSSAI
-
-
-
-Registration Type:
-
-Food Business Licence
-
-
-
-Registration Number:
-
-XXXXXXXXXXXXXX
-
-\`\`\`
-
-
-
-A New Zealand business may configure the appropriate authority and registration details applicable to its business.
-
-
-
-This approach allows Bizora to support different regulatory systems without tying the product to a specific country.
-
-
-
-\---
-
-
-
-\### 👥 Customer Management
-
-
-
-Manage both individual and business customers.
-
-
-
-\#### Individual Customer
-
-
-
-\* First name
-
-\* Last name
-
-\* Phone
-
-\* Email
-
-\* Address
-
-\* Location details
-
-\* Customer transaction history
-
-
-
-\#### Business Customer
-
-
-
-\* Business name
-
-\* Contact person
-
-\* Phone
-
-\* Email
-
-\* Tax registration details
-
-\* Business address
-
-\* Business transaction history
-
-
-
-\---
-
-
-
-\### 📦 Product Management
-
-
-
-Manage products, pricing, units, and inventory.
-
-
-
-Bizora initially focuses on common dairy products such as:
-
-
-
-\* Milk
-
-\* Curd
-
-\* Tofu
-
-\* Paneer
-
-\* Other dairy products
-
-
-
-The product system is intentionally generic so the platform can later support:
-
-
-
-\* Grocery businesses
-
-\* Bakeries
-
-\* Cafes
-
-\* Restaurants
-
-\* Small retailers
-
-\* Wholesalers
-
-\* Other small businesses
-
-
-
-\---
-
-
-
-\### 📋 Daily Entries
-
-
-
-Record daily business transactions quickly.
-
-
-
-\* Create daily entries
-
-\* Select customers
-
-\* Add multiple products
-
-\* Set quantities
-
-\* Calculate totals
-
-\* Apply discounts
-
-\* Track payment status
-
-\* View previous entries
-
-
-
-\---
-
-
-
-\### 🧾 Billing
-
-
-
-Create bills directly from customer transactions.
-
-
-
-\* Generate invoices
-
-\* Invoice numbering
-
-\* Customer information
-
-\* Product details
-
-\* Quantity and pricing
-
-\* Tax calculation
-
-\* Discounts
-
-\* Payment status
-
-\* Print invoices
-
-\* Generate PDF invoices
-
-
-
-\---
-
-
-
-\### 🛒 Stock Purchases & Inventory Purchasing
-
-
-
-Track products and materials purchased from suppliers and understand how stock enters the business.
-
-
-
-Businesses can record:
-
-
-
-\* Purchase date
-
-\* Supplier
-
-\* Products purchased
-
-\* Quantity
-
-\* Unit price
-
-\* Tax
-
-\* Purchase total
-
-\* Payment status
-
-\* Payment method
-
-\* Payment date
-
-\* Payment reference
-
-\* Notes
-
-
-
-A single purchase can contain multiple products.
-
-
-
-Example:
-
-
-
-\`\`\`text
-
+```text
 15 September 2026
-
-
-
-Supplier:
-
-ABC Foods
-
-
+Supplier: ABC Foods
 
 Items:
+  Milk     50 litres
+  Paneer   20 kg
+  Curd     30 kg
 
-Milk       50 litres
+Purchase Total: ₹12,000
+```
 
-Paneer     20 kg
+Stock purchases are kept separate from general expenses because they affect inventory.
 
-Curd       30 kg
+### 🏢 Supplier Management
 
+Supplier name, contact person, phone, email, tax registration number, address, notes and active / inactive status. Supplier history can later be used to understand purchasing activity and spending.
 
+### 💸 Expense Management
 
-Purchase Total:
+Track business costs that are not stock purchases: rent, electricity, transport, repairs, maintenance, packaging, equipment and other operating expenses.
 
-₹12,000
+Each expense has a date, category, description, amount, payment method, reference and notes. Businesses maintain their own expense categories.
 
-\`\`\`
+### 👷 Worker Management and Payments
 
+Bizora includes lightweight worker management. It intentionally avoids complex HR features, because many small businesses have only a few workers.
 
+| Worker information | Worker payments |
+|---|---|
+| Name, phone, email | Worker and payment date |
+| Role / job, joining date | Payment period |
+| Payment type, default amount | Amount, method, reference |
+| Address, notes | Notes |
+| Active / inactive status | |
 
-Stock purchases are kept separate from general business expenses because they affect inventory.
+Worker payments are tracked separately from general expenses, so you can see how much was paid to workers in a given week or month.
 
+### 💰 Payment Tracking
 
+Paid, unpaid and partially paid status; outstanding balance; customer payment history; mark an invoice as paid.
 
-\---
+### 📊 Reports
 
+Planned reports: daily and monthly sales, total revenue, outstanding payments, customer and product sales, payment reports, stock purchase and supplier reports, expense reports, worker payment reports, business overview, revenue vs expenses, purchase vs sales and profit overview.
 
+### 💾 Local-First and Backup
 
-\### 🏢 Supplier Management
+Business data is stored on the user's computer instead of a hosted database.
 
+- No monthly hosting cost and no external database
+- Core functionality works without internet
+- Fast local data access and greater control over business data
+- Simple deployment
 
+Because data is stored locally, backups matter. Planned: manual backup, automatic backups, backup history, restore from backup and data export.
 
-Manage the businesses and people from whom products or materials are purchased.
+---
 
+## 🖥️ Architecture
 
+Bizora is a single application in a single repository.
 
-Supplier information can include:
+```text
+              ┌───────────────────────┐
+              │        Electron       │
+              │      Desktop App      │
+              └───────────┬───────────┘
+                          │
+                          ▼
+              ┌───────────────────────┐
+              │        Next.js        │
+              │  SSR · Server Actions │
+              │    Route Handlers     │
+              └───────────┬───────────┘
+                          │
+            ┌─────────────┴─────────────┐
+            ▼                           ▼
+     ┌─────────────┐             ┌─────────────┐
+     │  shadcn/ui  │             │ Drizzle ORM │
+     │  Tailwind   │             └──────┬──────┘
+     └─────────────┘                    ▼
+                                 ┌─────────────┐
+                                 │   SQLite    │
+                                 │  Local DB   │
+                                 └─────────────┘
+```
 
+**Principles:** single repository · single desktop application · local-first · no separately hosted backend · local SQLite database · type-safe database access · server-side rendering · component-based UI · automated application setup · country-aware configuration · extensible regulatory and tax models.
 
+---
 
-\* Supplier name
+## 🛠️ Tech Stack
 
-\* Contact person
+| Layer | Technology |
+|---|---|
+| Frontend | Next.js, React, TypeScript, Tailwind CSS, shadcn/ui |
+| Desktop | Electron |
+| Backend / server | Next.js Server Actions, Next.js Route Handlers, Node.js runtime |
+| Database | SQLite, Drizzle ORM, Drizzle Kit |
+| Development | TypeScript, ESLint, Git, GitHub |
 
-\* Phone
+---
 
-\* Email
+## 📁 Project Structure
 
-\* Tax registration number
-
-\* Address
-
-\* Notes
-
-\* Active / inactive status
-
-
-
-Supplier history can later be used to understand purchasing activity and supplier spending.
-
-
-
-\---
-
-
-
-\### 💸 Expense Management
-
-
-
-Track business expenses that are not directly recorded as stock purchases.
-
-
-
-Examples include:
-
-
-
-\* Rent
-
-\* Electricity
-
-\* Transport
-
-\* Repairs
-
-\* Maintenance
-
-\* Packaging
-
-\* Equipment
-
-\* Other operating expenses
-
-
-
-Each expense can contain:
-
-
-
-\* Expense date
-
-\* Expense category
-
-\* Description
-
-\* Amount
-
-\* Payment method
-
-\* Reference
-
-\* Notes
-
-
-
-Businesses can maintain their own expense categories.
-
-
-
-\---
-
-
-
-\### 👷 Worker Management
-
-
-
-Bizora includes lightweight worker management designed for small businesses.
-
-
-
-It intentionally avoids complex HR functionality because many small businesses have only a few workers.
-
-
-
-Worker information can include:
-
-
-
-\* Worker name
-
-\* Phone
-
-\* Email
-
-\* Role / job
-
-\* Joining date
-
-\* Payment type
-
-\* Default payment amount
-
-\* Address
-
-\* Notes
-
-\* Active / inactive status
-
-
-
-\---
-
-
-
-\### 💵 Worker Payments
-
-
-
-Track payments made to workers separately from general business expenses.
-
-
-
-Each payment can include:
-
-
-
-\* Worker
-
-\* Payment date
-
-\* Payment period
-
-\* Amount
-
-\* Payment method
-
-\* Payment reference
-
-\* Notes
-
-
-
-This makes it possible to see how much a business paid its workers during a particular week or month.
-
-
-
-\---
-
-
-
-\### 💰 Payment Details on Bills
-
-
-
-Businesses can configure their payment information once and display it directly on invoices.
-
-
-
-Supported information can include:
-
-
-
-\* Bank name
-
-\* Account name
-
-\* Account number
-
-\* Branch
-
-\* Routing / bank code
-
-\* Payment identifier
-
-\* Payment QR
-
-\* Payment instructions
-
-
-
-Bizora does \*\*not\*\* require a payment gateway for this workflow.
-
-
-
-The invoice simply shows the business's configured payment details. Customers can scan the QR code and enter the invoice amount in their payment application, or use the displayed bank details.
-
-
-
-Payment details are snapshotted on invoices so that changing the business's payment information later does not alter previously generated invoices.
-
-
-
-\---
-
-
-
-\### 💰 Payment Tracking
-
-
-
-Keep track of customer payments and outstanding amounts.
-
-
-
-\* Paid
-
-\* Unpaid
-
-\* Partially paid
-
-\* Outstanding balance
-
-\* Customer payment history
-
-\* Mark invoice as paid
-
-
-
-\---
-
-
-
-\### 📊 Reports
-
-
-
-Understand the business through simple reports.
-
-
-
-Planned reports include:
-
-
-
-\* Daily sales
-
-\* Monthly sales
-
-\* Total revenue
-
-\* Outstanding payments
-
-\* Customer sales
-
-\* Product sales
-
-\* Payment reports
-
-\* Stock purchase reports
-
-\* Supplier purchase reports
-
-\* Expense reports
-
-\* Worker payment reports
-
-\* Business overview
-
-\* Revenue vs expenses
-
-\* Purchase vs sales
-
-\* Profit overview
-
-
-
-\---
-
-
-
-\### 💾 Local-First Architecture
-
-
-
-Bizora is designed to work locally.
-
-
-
-Business data is stored on the user's computer rather than requiring a hosted database.
-
-
-
-Benefits include:
-
-
-
-\* No monthly hosting cost
-
-\* No external database required
-
-\* Core functionality available without internet
-
-\* Fast local data access
-
-\* Greater control over business data
-
-\* Simple deployment
-
-
-
-\---
-
-
-
-\### 🔐 Backup & Restore
-
-
-
-Because the application stores business data locally, backups are an important part of Bizora.
-
-
-
-Planned functionality:
-
-
-
-\* Manual database backup
-
-\* Automatic backups
-
-\* Backup history
-
-\* Restore from backup
-
-\* Export business data
-
-
-
-\---
-
-
-
-\## 🖥️ Application Architecture
-
-
-
-Bizora is designed as a single application and repository.
-
-
-
-\`\`\`text
-
-&#x20;                   ┌─────────────────────┐
-
-&#x20;                   │       Electron      │
-
-&#x20;                   │     Desktop App     │
-
-&#x20;                   └──────────┬──────────┘
-
-&#x20;                              │
-
-&#x20;                              ▼
-
-&#x20;                   ┌─────────────────────┐
-
-&#x20;                   │      Next.js        │
-
-&#x20;                   │                     │
-
-&#x20;                   │        SSR          │
-
-&#x20;                   │   Server Actions    │
-
-&#x20;                   │   Route Handlers    │
-
-&#x20;                   └──────────┬──────────┘
-
-&#x20;                              │
-
-&#x20;                ┌─────────────┴─────────────┐
-
-&#x20;                │                           │
-
-&#x20;                ▼                           ▼
-
-&#x20;         ┌─────────────┐             ┌─────────────┐
-
-&#x20;         │  shadcn/ui  │             │   Drizzle   │
-
-&#x20;         │  Tailwind   │             │     ORM     │
-
-&#x20;         └─────────────┘             └──────┬──────┘
-
-&#x20;                                            │
-
-&#x20;                                            ▼
-
-&#x20;                                     ┌─────────────┐
-
-&#x20;                                     │   SQLite    │
-
-&#x20;                                     │  Local DB   │
-
-&#x20;                                     └─────────────┘
-
-\`\`\`
-
-
-
-\### Architecture Principles
-
-
-
-\* Single repository
-
-\* Single desktop application
-
-\* Local-first
-
-\* No separately hosted backend
-
-\* Local SQLite database
-
-\* Type-safe database access
-
-\* Server-side rendering
-
-\* Component-based UI
-
-\* Automated application setup
-
-\* Country-aware configuration
-
-\* Extensible regulatory and tax models
-
-
-
-\---
-
-
-
-\## 🖼️ Project Images
-
-
-
-GitHub supports images directly inside Markdown. Bizora can use repository assets without requiring an external image host.
-
-
-
-Example:
-
-
-
-\`\`\`md
-
-![Bizora]\(.public/platform-assets/platform-logo.png)
-
-\`\`\`
-
-
-
-The repository currently keeps platform branding under:
-
-
-
-\`\`\`text
-
-platform-assets/
-
-├── platform-logo.png
-
-├── platform-tp-logo.png
-
-├── platform-app-icon.png
-
-└── platform-tp-app-icon.png
-
-\`\`\`
-
-
-
-Using relative paths keeps README images available directly from the repository and avoids depending on external image hosting.
-
-
-
-\---
-
-
-
-\## 🛠️ Tech Stack
-
-
-
-\### Frontend
-
-
-
-\* Next.js
-
-\* React
-
-\* TypeScript
-
-\* Tailwind CSS
-
-\* shadcn/ui
-
-
-
-\### Desktop
-
-
-
-\* Electron
-
-
-
-\### Backend / Server
-
-
-
-\* Next.js Server Actions
-
-\* Next.js Route Handlers
-
-\* Node.js runtime
-
-
-
-\### Database
-
-
-
-\* SQLite
-
-\* Drizzle ORM
-
-\* Drizzle Kit
-
-
-
-\### Development
-
-
-
-\* TypeScript
-
-\* ESLint
-
-\* Git
-
-\* GitHub
-
-
-
-\---
-
-
-
-\## 📁 Planned Project Structure
-
-
-
-\`\`\`text
-
+```text
 bizora/
-
-│
-
 ├── app/
-
 │   ├── login/
-
-│   ├── setup/
-
-│   │   ├── business/
-
-│   │   ├── tax/
-
-│   │   ├── regulatory/
-
-│   │   ├── customers/
-
-│   │   └── products/
-
-│   │
-
+│   ├── setup/            # business, tax, regulatory, customers, products
 │   ├── dashboard/
-
 │   ├── daily-entries/
-
 │   ├── customers/
-
 │   ├── products/
-
 │   ├── stock-purchases/
-
 │   ├── suppliers/
-
 │   ├── expenses/
-
 │   ├── workers/
-
 │   └── reports/
-
-│
-
-├── components/
-
-│   ├── ui/
-
-│   ├── layout/
-
-│   ├── dashboard/
-
-│   ├── customers/
-
-│   ├── products/
-
-│   ├── billing/
-
-│   └── reports/
-
-│
-
-├── lib/
-
-│   ├── db/
-
-│   ├── auth/
-
-│   ├── validations/
-
-│   └── utilities/
-
-│
-
-├── electron/
-
-│   ├── main.ts
-
-│   ├── preload.ts
-
-│   └── updater.ts
-
-│
-
+├── components/           # ui, layout, dashboard, customers, products, billing, reports
+├── lib/                  # db, auth, validations, utilities
+├── electron/             # main.ts, preload.ts, updater.ts
 ├── drizzle/
-
 │   └── migrations/
-
-│
-
-├── scripts/
-
-│   ├── setup.ts
-
-│   ├── migrate.ts
-
-│   └── backup.ts
-
-│
-
+├── scripts/              # setup.ts, migrate.ts, backup.ts
 ├── public/
-
-│
-
+│   └── platform-assets/  # logos and app icons
 ├── package.json
-
 ├── next.config.ts
-
 ├── drizzle.config.ts
-
 ├── tsconfig.json
-
 └── README.md
+```
 
-\`\`\`
+> The structure may evolve as Bizora develops.
 
+Platform branding lives in `public/platform-assets/`:
 
+```text
+platform-logo.png · platform-tp-logo.png · platform-app-icon.png · platform-tp-app-icon.png
+```
 
-\> The project structure may evolve as Bizora develops.
+Images use relative paths, so they load directly from the repository with no external image host:
 
+```md
+![Bizora](./public/platform-assets/platform-logo.png)
+```
 
+---
 
-\---
+## 🧭 First-Launch Setup
 
+The first launch is a setup wizard.
 
-
-\## 🧭 Application Flow
-
-
-
-The first launch is designed around a simple setup wizard.
-
-
-
-\`\`\`text
-
+```text
 Install Bizora
-
-&#x20;     │
-
-&#x20;     ▼
-
+      │
+      ▼
 Welcome
-
-&#x20;     │
-
-&#x20;     ▼
-
-Country & Business
-
-&#x20;     │
-
-&#x20;     ├── Country
-
-&#x20;     ├── Business Type
-
-&#x20;     └── Business Information
-
-&#x20;     │
-
-&#x20;     ▼
-
-Tax Information
-
-&#x20;     │
-
-&#x20;     ├── Tax System
-
-&#x20;     └── Tax Registration
-
-&#x20;     │
-
-&#x20;     ▼
-
-Regulatory Information\*
-
-&#x20;     │
-
-&#x20;     ├── Authority / Department
-
-&#x20;     ├── Registration Type
-
-&#x20;     └── Registration Number
-
-&#x20;     │
-
-&#x20;     ▼
-
-Payment Details
-
-&#x20;     │
-
-&#x20;     ├── Bank Details
-
-&#x20;     ├── Payment Identifier
-
-&#x20;     ├── Payment QR
-
-&#x20;     └── Payment Instructions
-
-&#x20;     │
-
-&#x20;     ▼
-
-Customer Setup
-
-&#x20;     │
-
-&#x20;     ├── Person
-
-&#x20;     └── Business
-
-&#x20;     │
-
-&#x20;     ▼
-
-Product Setup
-
-&#x20;     │
-
-&#x20;     ├── Product
-
-&#x20;     ├── Unit
-
-&#x20;     ├── Price
-
-&#x20;     └── Opening Stock
-
-&#x20;     │
-
-&#x20;     ▼
-
+      │
+      ▼
+Country & Business ──── country · business type · business information
+      │
+      ▼
+Tax Information ─────── tax system · tax registration
+      │
+      ▼
+Regulatory Info* ────── authority · registration type · registration number
+      │
+      ▼
+Payment Details ─────── bank details · identifier · QR · instructions
+      │
+      ▼
+Customer Setup ──────── person · business
+      │
+      ▼
+Product Setup ───────── product · unit · price · opening stock
+      │
+      ▼
 Setup Complete 🎉
-
-&#x20;     │
-
-&#x20;     ▼
-
+      │
+      ▼
 Dashboard
+```
 
-\`\`\`
+<sub>\* Regulatory information is shown based on the selected country and business type.</sub>
 
+### Setup finalization
 
-
-\`\*\` Regulatory information can be shown based on the selected country and business type.
-
-
-
-\---
-
-
-
-\## 🧩 Setup Finalization Workflow
-
-The setup wizard collects the business configuration and user-defined customers/products. Finalization is handled centrally by the setup persistence layer.
+The wizard collects the business configuration and user-defined customers and products. Finalization is handled by one setup persistence layer and is **transactional**: the database is not considered initialized until the whole operation succeeds.
 
 ```text
 Setup Wizard
      │
-     ├── Business Information
-     ├── Tax Information
-     ├── Regulatory Information
-     ├── Payment Details
-     ├── User Customers
-     └── User Products
-     │
      ▼
 Transactional Setup Save
-     │
      ├── Create Business
      ├── Save Tax / Regulatory Data
      ├── Save Payment Details
      ├── Create User Customers
      ├── Create User Products
-     ├── Create Walk-in Customer
-     └── Create Quick Sale Product
+     ├── Create Walk-in Customer      ← system record
+     └── Create Quick Sale Product    ← system record
      │
      ▼
-Mark Setup Complete
-     │
-     ▼
-Dashboard
+Mark Setup Complete  →  Dashboard
 ```
 
-Setup finalization is transactional so the database should not be considered successfully initialized until the complete setup operation succeeds.
+### System records
 
-The setup-created system records are:
+Setup creates two application-owned records:
 
-* `WALK_IN_CUSTOMER`
-* `QUICK_SALE`
+| Record | Type | Purpose |
+|---|---|---|
+| `WALK_IN_CUSTOMER` | Customer | Used for counter sales to unknown customers |
+| `QUICK_SALE` | Product | Used for quick counter sales (quantity 1) |
 
-They are not added to the setup wizard's customer/product input lists because they are application-owned records rather than user-created business records.
-
-## 🌍 Country-Aware Design
-
-
-
-A core principle of Bizora is to avoid hard-coding country-specific concepts into the business model.
-
-
-
-For example, instead of creating database fields such as:
-
-
-
-\`\`\`text
-
-fssai_number
-
-gst_number
-
-nzbn_number
-
-abn_number
-
-\`\`\`
-
-
-
-Bizora uses extensible models such as:
-
-
-
-\`\`\`text
-
-business_registrations
-
-\`\`\`
-
-
-
-Example structure:
-
-
-
-\`\`\`text
-
-business_registrations
-
-────────────────────────────
-
-id
-
-business_id
-
-country
-
-authority_name
-
-registration_type
-
-registration_number
-
-issue_date
-
-expiry_date
-
-metadata
-
-\`\`\`
-
-
-
-Similarly, tax information can be represented through configurable tax registrations rather than country-specific database columns.
-
-
-
-This allows the same core application to support businesses in different countries while presenting locally relevant terminology to the user.
-
-
-
-\---
-
-
-
-\## 📌 Main Navigation
-
-
-
-Bizora keeps the main navigation intentionally simple.
-
-
-
-\`\`\`text
-
-Dashboard
-
-Daily Entries
-
-Customers
-
-Products
-
-Stock Purchases
-
-Suppliers
-
-Expenses
-
-Workers
-
-Reports
-
-Settings
-
-\`\`\`
-
-
-
-The goal is to make the application usable by business owners without requiring technical knowledge.
-
-
-
-\---
-
-
-
-\## ⚙️ Settings
-
-
-
-Settings contains business configuration and management options that do not need to be part of the daily operational navigation.
-
-
-
-Planned settings tabs include:
-
-
-
-\`\`\`text
-
-Settings
-
-├── Business
-
-├── Tax & Registrations
-
-├── Payment Details
-
-├── Invoice & Billing
-
-├── Expense Categories
-
-├── Product Categories
-
-├── Data & Backup
-
-└── Application
-
-\`\`\`
-
-
-
-This keeps the main navigation focused on daily business operations while configuration remains centralized in Settings.
-
-
-
-\---
-
-
-
-\## 🏠 Dashboard
-
-
-
-The dashboard provides a quick overview of the business.
-
-
-
-Planned information includes:
-
-
-
-\`\`\`text
-
-Today's Sales
-
-Today's Entries
-
-Outstanding Amount
-
-Recent Transactions
-
-Sales Overview
-
-Top Products
-
-Recent Customers
-
-Low Stock Items
-
-Recent Purchases
-
-Recent Expenses
-
-Worker Payments
-
-Revenue vs Expenses
-
-\`\`\`
-
-
-
-The dashboard is designed to answer one simple question:
-
-
-
-\> \*\*How is my business doing today?\*\*
-
-
-
-\---
-
-
-
-\## 📋 Daily Entries
-
-
-
-Daily Entries is the core operational workflow.
-
-
-
-A business can:
-
-
-
-\`\`\`text
-
-Select Customer
-
-&#x20;     ↓
-
-Select Products
-
-&#x20;     ↓
-
-Enter Quantities
-
-&#x20;     ↓
-
-Calculate Total
-
-&#x20;     ↓
-
-Set Payment Status
-
-&#x20;     ↓
-
-Save Entry
-
-\`\`\`
-
-
-
-Each entry becomes part of the customer's transaction history and can be used to generate a bill.
-
-
-
-\---
-
-
-
-\## 🔄 Business Workflow
-
-
-
-Bizora is designed around the complete day-to-day business cycle:
-
-
-
-\`\`\`text
-
-&#x20;                   ┌─────────────────┐
-
-&#x20;                   │     Business    │
-
-&#x20;                   │      Setup      │
-
-&#x20;                   └────────┬────────┘
-
-&#x20;                            │
-
-&#x20;         ┌──────────────────┼──────────────────┐
-
-&#x20;         ▼                  ▼                  ▼
-
-&#x20;    Customers           Products           Suppliers
-
-&#x20;         │                  │                  │
-
-&#x20;         │                  │                  │
-
-&#x20;         ▼                  ▼                  ▼
-
-&#x20;    Daily Sales       Stock / Inventory    Purchases
-
-&#x20;         │                  ▲                  │
-
-&#x20;         ▼                  │                  │
-
-&#x20;      Invoices             │                  │
-
-&#x20;         │                  │                  │
-
-&#x20;         ▼                  │                  │
-
-&#x20;     Payments              │                  │
-
-&#x20;                            │                  │
-
-&#x20;                            └──────────────────┘
-
-
-
-&#x20;         ┌─────────────────────────────────────┐
-
-&#x20;         │           Business Expenses        │
-
-&#x20;         └──────────────────┬──────────────────┘
-
-&#x20;                            │
-
-&#x20;                            ▼
-
-&#x20;                   Expense Categories
-
-
-
-&#x20;         ┌─────────────────────────────────────┐
-
-&#x20;         │              Workers                │
-
-&#x20;         └──────────────────┬──────────────────┘
-
-&#x20;                            │
-
-&#x20;                            ▼
-
-&#x20;                    Worker Payments
-
-
-
-&#x20;                            │
-
-&#x20;                            ▼
-
-&#x20;                       ┌─────────┐
-
-&#x20;                       │ Reports │
-
-&#x20;                       └─────────┘
-
-\`\`\`
-
-
-
-The platform therefore tracks the major flows of a small business:
-
-
-
-\`\`\`text
-
-Sales
-
-&#x20; ↓
-
-Revenue
-
-
-
-Purchases
-
-&#x20; ↓
-
-Inventory
-
-
-
-Expenses
-
-&#x20; ↓
-
-Operating Costs
-
-
-
-Worker Payments
-
-&#x20; ↓
-
-Labour Costs
-
-
-
-Revenue - Business Costs
-
-&#x20; ↓
-
-Business Overview / Profit
-
-\`\`\`
-
-
-
-\## 👥 Customer Workflow
-
-
-
-\`\`\`text
-
-Customers
-
-&#x20;   │
-
-&#x20;   ├── Customer List
-
-&#x20;   │
-
-&#x20;   └── Customer Details
-
-&#x20;           │
-
-&#x20;           ├── Customer Information
-
-&#x20;           ├── Transaction History
-
-&#x20;           ├── Outstanding Balance
-
-&#x20;           ├── Create Bill
-
-&#x20;           └── Payment History
-
-\`\`\`
-
-
-
-\---
-
-
-
-\## ⚡ Quick Sale Workflow
-
-Quick Sale is designed for dairy shops, sweet shops, counters, and other small businesses where many customers may be unknown or do not need a customer account.
-
-```text
-Counter Sale
-     │
-     ▼
-Enter Amount
-     │
-     ▼
-Select Payment Method
-     │
-     ▼
-Create Transaction
-     │
-     ├── Walk-in Customer
-     │
-     ├── Quick Sale Product
-     │
-     ├── Quantity = 1
-     │
-     └── Payment = PAID
-     │
-     ▼
-Sales / Reports
-```
-
-The workflow deliberately avoids forcing the operator to create a customer or select a product for every small counter transaction.
-
-The database still keeps the required customer and product relationships by using the dedicated system records described in the **System Records** section.
+They are not part of the wizard's customer or product input lists, because they are not user-created business records.
 
 ---
 
-## 🧾 Billing Workflow
-
-
-
-\`\`\`text
-
-Customer
-
-&#x20;   │
-
-&#x20;   ▼
-
-Daily Entries
-
-&#x20;   │
-
-&#x20;   ▼
-
-Create Bill
-
-&#x20;   │
-
-&#x20;   ├── Invoice Details
-
-&#x20;   ├── Products
-
-&#x20;   ├── Tax
-
-&#x20;   ├── Discount
-
-&#x20;   └── Total
-
-&#x20;   │
-
-&#x20;   ▼
-
-Print / PDF
-
-&#x20;   │
-
-&#x20;   ▼
-
-Mark as Paid
-
-\`\`\`
-
-
-
-\---
-
-
-
-\---
-
-
-
-\## 🛒 Stock Purchase Workflow
-
-
-
-\`\`\`text
-
-Supplier
-
-&#x20;  │
-
-&#x20;  ▼
-
-Stock Purchase
-
-&#x20;  │
-
-&#x20;  ├── Select Products
-
-&#x20;  ├── Enter Quantities
-
-&#x20;  ├── Enter Purchase Prices
-
-&#x20;  ├── Apply Tax
-
-&#x20;  └── Record Payment Status
-
-&#x20;  │
-
-&#x20;  ▼
-
-Stock Updated
-
-&#x20;  │
-
-&#x20;  ▼
-
-Supplier Purchase History
-
-\`\`\`
-
-
-
-Stock purchases are recorded separately from ordinary expenses because purchased products can increase inventory.
-
-
-
-\---
-
-
-
-\## 💸 Expense Workflow
-
-
-
-\`\`\`text
-
-Expense Category
-
-&#x20;      │
-
-&#x20;      ▼
-
-Create Expense
-
-&#x20;      │
-
-&#x20;      ├── Date
-
-&#x20;      ├── Description
-
-&#x20;      ├── Amount
-
-&#x20;      ├── Payment Method
-
-&#x20;      └── Notes
-
-&#x20;      │
-
-&#x20;      ▼
-
-Expense History
-
-&#x20;      │
-
-&#x20;      ▼
-
-Expense Reports
-
-\`\`\`
-
-
-
-\---
-
-
-
-\## 👷 Worker Payment Workflow
-
-
-
-\`\`\`text
-
-Worker
-
-&#x20;  │
-
-&#x20;  ▼
-
-Worker Payment
-
-&#x20;  │
-
-&#x20;  ├── Payment Date
-
-&#x20;  ├── Payment Period
-
-&#x20;  ├── Amount
-
-&#x20;  ├── Payment Method
-
-&#x20;  └── Reference
-
-&#x20;  │
-
-&#x20;  ▼
-
-Worker Payment History
-
-&#x20;  │
-
-&#x20;  ▼
-
-Worker Reports
-
-\`\`\`
-
-
-
-\---
-
-
-
-\## 🗄️ Transaction & Data Rules
-
-Bizora keeps operational data relational and explicit.
-
-### Required Transaction Relationships
-
-Normal daily entries keep required references to:
+## 🧱 Design Principles
+
+### Country-aware design
+
+Bizora avoids hard-coding country-specific concepts into the business model. Instead of columns such as `fssai_number`, `gst_number`, `nzbn_number` or `abn_number`, it uses extensible models:
+
+```text
+business_registrations
+──────────────────────
+id
+business_id
+country
+authority_name
+registration_type
+registration_number
+issue_date
+expiry_date
+metadata
+```
+
+Tax information is likewise stored as configurable tax registrations rather than country-specific columns. The same core application serves businesses in different countries and shows locally relevant terminology.
+
+### Transaction and data rules
+
+Operational data is relational and explicit. Normal entries keep required references:
 
 ```text
 daily_entries
-    └── customer_id → customers.id
+  └── customer_id → customers.id
 
 daily_entry_items
-    └── product_id → products.id
+  └── product_id → products.id
 ```
 
-These relationships are intentionally not nullable for the Quick Sale workflow.
+These relationships are intentionally **not nullable**. Quick Sale uses the setup-created system records instead of skipping them.
 
-Instead, Quick Sale uses the setup-created system records.
+**System record visibility**
 
-### System Record Visibility
+| | Normal records | System records |
+|---|---|---|
+| Customers | Visible in customer management | Hidden from normal management |
+| Products | Visible in product management | Hidden from normal management |
 
-```text
-customers
-├── Normal customers → visible in customer management
-└── System customers → hidden from normal management
+System records should be filtered out of customer and product lists, normal selectors, and customer-facing ledgers where a real customer is expected. Internal transaction creation and reporting may still use them.
 
-products
-├── Normal products → visible in product management
-└── System products → hidden from normal management
-```
-
-System records should be filtered out of:
-
-* Customer lists
-* Product lists
-* Normal customer selectors
-* Normal product selectors
-* Customer-facing ledgers where a real customer is expected
-
-System records may still be used by internal transaction creation and reporting.
-
-### Transaction History
-
-Once a sale has been recorded, the transaction is treated as business history. User-interface visibility rules for system records must not remove the underlying transaction from sales reports.
+**Transaction history.** Once a sale is recorded, it is business history. UI visibility rules for system records must never remove the underlying transaction from sales reports.
 
 ---
 
-## 🗺️ Roadmap
-
-
-
-\### Phase 1 — Foundation
-
-
-
-\* [ ] Project initialization
-
-\* [ ] Next.js setup
-
-\* [ ] Electron setup
-
-\* [ ] TypeScript configuration
-
-\* [ ] Tailwind CSS
-
-\* [ ] shadcn/ui
-
-\* [ ] SQLite
-
-\* [ ] Drizzle ORM
-
-\* [ ] Database migrations
-
-
-
-\### Phase 2 — Business Setup
-
-
-
-\* [ ] First-launch detection
-
-\* [ ] Country selection
-
-\* [ ] Business type
-
-\* [ ] Business setup wizard
-
-\* [ ] Business logo upload
-
-\* [ ] Business information
-
-\* [ ] Tax configuration
-
-\* [ ] Regulatory configuration
-
-\* [ ] Business settings
-
-
-
-\### Phase 3 — Customers
-
-
-
-\* [ ] Customer model
-
-\* [ ] Person customer
-
-\* [ ] Business customer
-
-\* [ ] Customer list
-
-\* [ ] Customer details
-
-\* [ ] Customer transaction history
-
-\* [ ] Customer outstanding balance
-
-
-
-\### Phase 4 — Products
-
-
-
-\* [ ] Product management
-
-\* [ ] Product categories
-
-\* [ ] Units
-
-\* [ ] Pricing
-
-\* [ ] Opening stock
-
-\* [ ] Stock tracking
-* [ ] System product support
-
-
-
-\### Phase 5 — Daily Operations
-
-
-
-\* [ ] Daily entries
-
-\* [ ] Entry items
-
-\* [ ] Customer transactions
-
-\* [ ] Payment status
-
-\* [ ] Customer ledger
-* [ ] Quick Sale workflow
-* [ ] Walk-in customer workflow
-
-
-
-\### Phase 6 — Billing
-
-
-
-\* [ ] Invoice generation
-
-\* [ ] Invoice numbering
-
-\* [ ] Invoice preview
-
-\* [ ] PDF generation
-
-\* [ ] Invoice printing
-
-\* [ ] Mark as paid
-
-
-
-\### Phase 7 — Stock Purchases & Suppliers
-
-
-
-\* [ ] Supplier management
-
-\* [ ] Stock purchase management
-
-\* [ ] Purchase items
-
-\* [ ] Purchase payment tracking
-
-\* [ ] Stock updates from purchases
-
-\* [ ] Supplier purchase history
-
-
-
-\### Phase 8 — Expenses
-
-
-
-\* [ ] Expense categories
-
-\* [ ] Business expenses
-
-\* [ ] Expense payment tracking
-
-\* [ ] Expense history
-
-\* [ ] Expense reports
-
-
-
-\### Phase 9 — Workers
-
-
-
-\* [ ] Worker management
-
-\* [ ] Worker details
-
-\* [ ] Worker payment tracking
-
-\* [ ] Worker payment history
-
-\* [ ] Worker reports
-
-
-
-\### Phase 10 — Reports
-
-
-
-\* [ ] Daily sales
-
-\* [ ] Monthly sales
-
-\* [ ] Revenue reports
-
-\* [ ] Outstanding payments
-
-\* [ ] Customer reports
-
-\* [ ] Product reports
-
-\* [ ] Stock purchase reports
-
-\* [ ] Supplier reports
-
-\* [ ] Expense reports
-
-\* [ ] Worker payment reports
-
-\* [ ] Revenue vs expenses
-
-\* [ ] Profit overview
-
-
-
-\## 🔄 Application Update Workflow
-
-Bizora is a local-first desktop application, so application updates and business-data migrations are separate concerns.
-
-The update workflow is designed around this principle:
-
-> **Updating the application must not destroy or silently replace the business database.**
-
-Expected update flow:
+## 📌 App Layout
+
+### Main navigation
+
+```text
+Dashboard · Daily Entries · Customers · Products · Stock Purchases
+Suppliers · Expenses · Workers · Reports · Settings
+```
+
+The goal is an app a business owner can use without technical knowledge.
+
+### Settings
+
+Configuration lives in Settings so daily navigation stays focused on operations.
+
+```text
+Settings
+├── Business
+├── Tax & Registrations
+├── Payment Details
+├── Invoice & Billing
+├── Expense Categories
+├── Product Categories
+├── Data & Backup
+└── Application
+```
+
+### Dashboard
+
+A quick overview built to answer one question: **How is my business doing today?**
+
+Planned: today's sales and entries, outstanding amount, recent transactions, sales overview, top products, recent customers, low stock items, recent purchases and expenses, worker payments, and revenue vs expenses.
+
+---
+
+## 🔄 Workflows
+
+### Business cycle
+
+Bizora follows the full day-to-day cycle of a small business.
+
+```text
+                     Business Setup
+                           │
+         ┌─────────────────┼─────────────────┐
+         ▼                 ▼                 ▼
+     Customers          Products         Suppliers
+         │                 ▲                 │
+         ▼                 │                 ▼
+    Daily Sales ──► Stock / Inventory ◄── Purchases
+         │
+         ▼
+     Invoices
+         │
+         ▼
+     Payments
+
+  Business Expenses ──► Expense Categories
+  Workers ────────────► Worker Payments
+
+                           │
+                           ▼
+                        Reports
+```
+
+```text
+Sales → Revenue
+Purchases → Inventory
+Expenses → Operating costs
+Worker payments → Labour costs
+Revenue − business costs → Business overview / profit
+```
+
+### Daily entry
+
+```text
+Select Customer → Select Products → Enter Quantities
+      → Calculate Total → Set Payment Status → Save Entry
+```
+
+Each entry becomes part of the customer's transaction history and can be used to generate a bill.
+
+### Customers
+
+```text
+Customers
+├── Customer List
+└── Customer Details
+    ├── Customer Information
+    ├── Transaction History
+    ├── Outstanding Balance
+    ├── Create Bill
+    └── Payment History
+```
+
+### Quick Sale
+
+Built for dairy shops, sweet shops, counters and other businesses where many customers are unknown or don't need an account.
+
+```text
+Counter Sale → Enter Amount → Select Payment Method
+      │
+      ▼
+Create Transaction
+      ├── Walk-in Customer
+      ├── Quick Sale Product
+      ├── Quantity = 1
+      └── Payment = PAID
+      │
+      ▼
+Sales / Reports
+```
+
+The operator never has to create a customer or pick a product for a small counter sale, yet the database keeps its required relationships through the [system records](#system-records).
+
+### Billing
+
+```text
+Customer → Daily Entries → Create Bill
+      ├── Invoice Details
+      ├── Products
+      ├── Tax
+      ├── Discount
+      └── Total
+      │
+      ▼
+Print / PDF → Mark as Paid
+```
+
+### Stock purchase
+
+```text
+Supplier → Stock Purchase
+      ├── Select Products
+      ├── Enter Quantities
+      ├── Enter Purchase Prices
+      ├── Apply Tax
+      └── Record Payment Status
+      │
+      ▼
+Stock Updated → Supplier Purchase History
+```
+
+Purchases are recorded separately from ordinary expenses because they can increase inventory.
+
+### Expenses
+
+```text
+Expense Category → Create Expense (date · description · amount · method · notes)
+      → Expense History → Expense Reports
+```
+
+### Worker payments
+
+```text
+Worker → Worker Payment (date · period · amount · method · reference)
+      → Worker Payment History → Worker Reports
+```
+
+---
+
+## 🔄 Application Updates
+
+Application updates and business-data migrations are separate concerns.
+
+> **Updating the application must never destroy or silently replace the business database.**
 
 ```text
 New Bizora Version Released
           │
           ▼
-Application Update
+Application Update → Start Bizora → Check Database Version
           │
-          ▼
-Start Bizora
+          ├── Up to date ──────────────► Start App
           │
-          ▼
-Check Database Version
-          │
-          ├── Database Up to Date
-          │        │
-          │        ▼
-          │     Start App
-          │
-          └── Migration Required
-                   │
-                   ▼
-            Create Safety Backup
-                   │
-                   ▼
-             Run Migrations
-                   │
-             ┌─────┴─────┐
-             │           │
-          Success      Failure
-             │           │
-             ▼           ▼
-          Start App   Restore / Stop
+          └── Migration required
+                     │
+                     ▼
+              Create Safety Backup
+                     │
+                     ▼
+               Run Migrations
+                     │
+               ┌─────┴─────┐
+            Success      Failure
+               │            │
+               ▼            ▼
+           Start App   Restore / Stop
 ```
 
-Application updates should follow these rules:
+**Rules**
 
-* The local SQLite database is treated as persistent business data.
-* Application binaries may be replaced during an update.
-* Database migrations must be versioned through Drizzle migrations.
-* A migration should never assume that business data can be discarded.
-* Database backup should happen before destructive or structural migrations where appropriate.
-* Failed migrations must not leave the application in an unknown state.
-* New application features should be backward-aware of existing database versions.
-* Setup-created system records are part of the application's data model and must be preserved during future updates.
-* Future migrations must not recreate duplicate `WALK_IN_CUSTOMER` or `QUICK_SALE` records for an already initialized business.
+- The local SQLite database is persistent business data.
+- Application binaries may be replaced during an update.
+- Migrations are versioned through Drizzle and never assume data can be discarded.
+- Back up before destructive or structural migrations where appropriate.
+- A failed migration must not leave the app in an unknown state.
+- New features must be backward-aware of existing database versions.
+- System records are part of the data model and must be preserved. Migrations must not create duplicate `WALK_IN_CUSTOMER` or `QUICK_SALE` records for an already initialized business.
 
-### Development Update Workflow
-
-When changing Bizora during development:
+### Development workflow
 
 ```text
-Change Schema / Code
-        │
-        ▼
-Update Drizzle Schema
-        │
-        ▼
-Generate Migration
-        │
-        ▼
-Run Migration
-        │
-        ▼
-Verify Database
-        │
-        ▼
-Update Business Logic
-        │
-        ▼
-Update UI
-        │
-        ▼
-Test Existing Workflows
-        │
-        ▼
-Update README / Architecture Docs
+Change schema/code → Update Drizzle schema → Generate migration
+   → Run migration → Verify database → Update business logic
+   → Update UI → Test existing workflows → Update README / docs
 ```
 
-For schema changes, the database and application code should be updated together so the repository remains internally consistent.
+Schema changes and application code should be updated together so the repository stays consistent.
+
+---
+
+## 🗺️ Roadmap
+
+<details>
+<summary><b>Phase 1 — Foundation</b></summary>
+
+- [ ] Project initialization
+- [ ] Next.js setup
+- [ ] Electron setup
+- [ ] TypeScript configuration
+- [ ] Tailwind CSS
+- [ ] shadcn/ui
+- [ ] SQLite
+- [ ] Drizzle ORM
+- [ ] Database migrations
+
+</details>
+
+<details>
+<summary><b>Phase 2 — Business Setup</b></summary>
+
+- [ ] First-launch detection
+- [ ] Country selection
+- [ ] Business type
+- [ ] Business setup wizard
+- [ ] Business logo upload
+- [ ] Business information
+- [ ] Tax configuration
+- [ ] Regulatory configuration
+- [ ] Business settings
+
+</details>
+
+<details>
+<summary><b>Phase 3 — Customers</b></summary>
+
+- [ ] Customer model
+- [ ] Person customer
+- [ ] Business customer
+- [ ] Customer list
+- [ ] Customer details
+- [ ] Customer transaction history
+- [ ] Customer outstanding balance
+
+</details>
+
+<details>
+<summary><b>Phase 4 — Products</b></summary>
+
+- [ ] Product management
+- [ ] Product categories
+- [ ] Units
+- [ ] Pricing
+- [ ] Opening stock
+- [ ] Stock tracking
+- [ ] System product support
+
+</details>
+
+<details>
+<summary><b>Phase 5 — Daily Operations</b></summary>
+
+- [ ] Daily entries
+- [ ] Entry items
+- [ ] Customer transactions
+- [ ] Payment status
+- [ ] Customer ledger
+- [ ] Quick Sale workflow
+- [ ] Walk-in customer workflow
+
+</details>
+
+<details>
+<summary><b>Phase 6 — Billing</b></summary>
+
+- [ ] Invoice generation
+- [ ] Invoice numbering
+- [ ] Invoice preview
+- [ ] PDF generation
+- [ ] Invoice printing
+- [ ] Mark as paid
 
-### Phase 11 — Desktop Production
+</details>
 
+<details>
+<summary><b>Phase 7 — Stock Purchases & Suppliers</b></summary>
 
+- [ ] Supplier management
+- [ ] Stock purchase management
+- [ ] Purchase items
+- [ ] Purchase payment tracking
+- [ ] Stock updates from purchases
+- [ ] Supplier purchase history
 
-\* [ ] Windows installer
+</details>
 
-\* [ ] Automatic application setup
+<details>
+<summary><b>Phase 8 — Expenses</b></summary>
 
-\* [ ] Local database initialization
+- [ ] Expense categories
+- [ ] Business expenses
+- [ ] Expense payment tracking
+- [ ] Expense history
+- [ ] Expense reports
 
-\* [ ] Database migrations
+</details>
 
-\* [ ] Application updates
+<details>
+<summary><b>Phase 9 — Workers</b></summary>
 
-\* [ ] Backup and restore
+- [ ] Worker management
+- [ ] Worker details
+- [ ] Worker payment tracking
+- [ ] Worker payment history
+- [ ] Worker reports
 
-\* [ ] Production logging
+</details>
 
+<details>
+<summary><b>Phase 10 — Reports</b></summary>
 
+- [ ] Daily sales
+- [ ] Monthly sales
+- [ ] Revenue reports
+- [ ] Outstanding payments
+- [ ] Customer reports
+- [ ] Product reports
+- [ ] Stock purchase reports
+- [ ] Supplier reports
+- [ ] Expense reports
+- [ ] Worker payment reports
+- [ ] Revenue vs expenses
+- [ ] Profit overview
 
-\### Future
+</details>
 
+<details>
+<summary><b>Phase 11 — Desktop Production</b></summary>
 
+- [ ] Windows installer
+- [ ] Automatic application setup
+- [ ] Local database initialization
+- [ ] Database migrations
+- [ ] Application updates
+- [ ] Backup and restore
+- [ ] Production logging
 
-\* [ ] macOS support
+</details>
 
-\* [ ] Linux support
+<details>
+<summary><b>Future</b></summary>
 
-\* [ ] Thermal printer support
+- [ ] macOS support
+- [ ] Linux support
+- [ ] Thermal printer support
+- [ ] Automatic backups
+- [ ] Data export
+- [ ] Additional business types
+- [ ] Advanced reporting
+- [ ] Additional country configurations
 
-\* [ ] Automatic backups
+</details>
 
-\* [ ] Data export
+---
 
-\* [ ] Additional business types
+## 🔒 Data & Privacy
 
-\* [ ] Advanced reporting
+Bizora is local-first. The core business database is stored on the user's computer, and no cloud database or hosted backend is needed for core functionality. Businesses keep their operational data locally and can use core features without an internet connection.
 
-\* [ ] Additional country configurations
+> Users are responsible for maintaining backups of their local business data.
 
+---
 
+## 🎯 Project Goal
 
-\---
+> **Give small businesses professional business-management tools without forcing them to manage servers, databases, hosting or complicated software infrastructure.**
 
+The project starts with workflows for small dairy businesses while keeping the architecture generic enough for other businesses and countries.
 
+| Simple | Local | Flexible |
+|---|---|---|
+| Owners can install Bizora and start without technical knowledge. | Core operations and data work locally with no hosted backend. | Tax, food-safety and regulatory requirements are configurable, not hard-coded. |
 
-\## 🔒 Data & Privacy
+---
 
+## 👨‍💻 Development
 
+Bizora is under active development. The architecture, database schema, UI and feature set may change as the project evolves.
 
-Bizora follows a local-first approach.
-
-
-
-The core business database is stored locally on the user's computer. Bizora does not require a cloud database or hosted backend for its core functionality.
-
-
-
-This allows businesses to maintain their operational data locally and use core functionality without an internet connection.
-
-
-
-Users are responsible for maintaining backups of their local business data.
-
-
-
-\---
-
-
-
-\## 🎯 Project Goal
-
-
-
-Bizora is being built with a simple objective:
-
-
-
-\> \*\*Give small businesses professional business-management tools without forcing them to manage servers, databases, hosting, or complicated software infrastructure.\*\*
-
-
-
-The project starts with common workflows for small dairy businesses while keeping the underlying architecture generic enough to support other businesses and countries.
-
-
-
-The platform is designed around three principles:
-
-
-
-\`\`\`text
-
-Simple
-
-Local
-
-Flexible
-
-\`\`\`
-
-
-
-\### Simple
-
-
-
-Business owners should be able to install Bizora and start using it without technical knowledge.
-
-
-
-\### Local
-
-
-
-Core business operations and data should work locally without requiring a hosted backend.
-
-
-
-\### Flexible
-
-
-
-Country-specific tax, food-safety, and regulatory requirements should be configurable rather than hard-coded into the application.
-
-
-
-\---
-
-
-
-\## 📄 License
-
-
+## 📄 License
 
 License information will be added as the project progresses.
-
-
-
-\---
-
-
-
-\## 👨‍💻 Development
-
-
-
-Bizora is actively under development.
-
-
-
-The architecture, database schema, UI, and feature set may change during development as the project evolves.
