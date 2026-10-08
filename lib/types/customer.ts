@@ -1,4 +1,5 @@
-export type CustomerType = "PERSON" | "BUSINESS";
+import { CUSTOMER_TYPE } from "@/common";
+
 
 export type CustomerTypeFilter =
   | "ALL"
@@ -7,7 +8,7 @@ export type CustomerTypeFilter =
 
 export interface CustomerListItem {
   id: number;
-  type: CustomerType;
+  type: CUSTOMER_TYPE;
   name: string;
   phone: string | null;
   email: string | null;
@@ -31,7 +32,7 @@ export interface CustomerBusinessDetails {
 export interface CustomerDetails {
   id: number;
   businessId: number;
-  type: CustomerType;
+  type: CUSTOMER_TYPE;
 
   phone: string | null;
   email: string | null;

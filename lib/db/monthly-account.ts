@@ -6,6 +6,7 @@ import {
     dailyEntries,
     monthlyAccountPayments
 } from "@/lib/db/schema";
+import { PAYMENT_TYPE } from "@/common";
 
 export type MonthlyAccountStatus =
   | "UNPAID"
@@ -24,7 +25,7 @@ export interface MonthlyAccountPayment {
 export interface MonthlyAccountEntry {
   id: number;
   entryDate: string;
-  paymentType: "IMMEDIATE" | "MONTHLY";
+  paymentType: PAYMENT_TYPE;
   paymentStatus: string;
   itemCount: number;
   total: number;
@@ -221,7 +222,7 @@ export function getMonthlyAccount(
       return {
         id: entry.id,
         entryDate: entry.entryDate,
-        paymentType: entry.paymentType as "IMMEDIATE" | "MONTHLY",
+        paymentType: entry.paymentType as PAYMENT_TYPE,
         paymentStatus: isMonthly
           ? "UNPAID"
           : entry.paymentStatus,

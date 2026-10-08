@@ -11,13 +11,13 @@ import {
 import type {
     CustomerDetails,
     CustomerListItem,
-    CustomerType,
     CustomerTypeFilter,
 } from "@/lib/types/customer";
+import { CUSTOMER_TYPE } from "@/common";
 
 function normalizeCustomerType(
     value: string | null | undefined,
-): CustomerType {
+): CUSTOMER_TYPE {
     return value?.toUpperCase() === "BUSINESS"
         ? "BUSINESS"
         : "PERSON";
@@ -65,6 +65,7 @@ export function getCustomers(
 
     const conditions = [
         eq(customers.businessId, businessId),
+        eq(customers.isSystem, false)
     ];
 
     if (type !== "ALL") {
@@ -205,7 +206,7 @@ export function getCustomers(
 
 export interface CreateCustomerInput {
     businessId: number;
-    type: "PERSON" | "BUSINESS";
+    type: CUSTOMER_TYPE;
 
     phone?: string | null;
     email?: string | null;

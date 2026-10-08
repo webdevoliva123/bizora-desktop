@@ -57,6 +57,7 @@ import {
 } from "@/components/ui/select";
 import { Textarea } from "@/components/ui/textarea";
 import { createDailyEntryAction } from "../actions";
+import { PAYMENT_METHOD, PAYMENT_STATUS, PAYMENT_TYPE } from "@/common";
 
 /* -------------------------------------------------------------------------- */
 /* Types + constants                                                          */
@@ -79,9 +80,9 @@ interface EntryItem {
   quantity: string;
 }
 
-type PaymentType = "IMMEDIATE" | "MONTHLY";
-type PaymentStatus = "UNPAID" | "PARTIAL" | "PAID";
-type PaymentMethod = "CASH" | "BANK_TRANSFER" | "CARD" | "OTHER";
+type PaymentType = PAYMENT_TYPE;
+type PaymentStatus = PAYMENT_STATUS;
+type PaymentMethod = PAYMENT_METHOD;
 
 interface Draft {
   customerId: number | null;
@@ -130,6 +131,7 @@ const PAYMENT_METHOD_OPTIONS: {
   referenceHint: string;
 }[] = [
   { value: "CASH", label: "Cash", referenceHint: "Optional" },
+  { value: "UPI", label: "UPI", referenceHint: "(Optional)" },
   {
     value: "BANK_TRANSFER",
     label: "Bank Transfer",

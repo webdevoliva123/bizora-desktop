@@ -14,13 +14,14 @@ import {
 } from "@/components/ui/dialog";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
+import { CUSTOMER_TYPE } from "@/common";
 
 interface DeleteCustomerDialogProps {
   open: boolean;
   onOpenChange: (open: boolean) => void;
   customerId: number;
   customerName: string;
-  customerType: "PERSON" | "BUSINESS";
+  customerType: CUSTOMER_TYPE;
   entryCount: number;
   onDeleted: () => void;
 }

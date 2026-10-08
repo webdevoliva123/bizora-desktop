@@ -1,6 +1,8 @@
 // components/daily-entries/payment-options.ts
 
-export type PaymentMethod = "CASH" | "BANK_TRANSFER" | "CARD" | "OTHER";
+import { PAYMENT_METHOD } from "@/common";
+
+export type PaymentMethod = PAYMENT_METHOD;
 
 export const PAYMENT_METHOD_OPTIONS: {
   value: PaymentMethod;

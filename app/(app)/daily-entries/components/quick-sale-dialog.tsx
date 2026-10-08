@@ -24,35 +24,11 @@ import {
 } from "@/components/ui/select";
 
 import { createQuickSaleAction } from "../actions";
+import { PAYMENT_METHOD, PAYMENT_METHOD_OPTIONS } from "@/common";
 
-type PaymentMethod = "CASH" | "BANK_TRANSFER" | "CARD" | "OTHER";
+type PaymentMethod = PAYMENT_METHOD;
 
-const PAYMENT_METHOD_OPTIONS: {
-  value: PaymentMethod;
-  label: string;
-  referencePlaceholder: string;
-}[] = [
-  {
-    value: "CASH",
-    label: "Cash",
-    referencePlaceholder: "Optional",
-  },
-  {
-    value: "BANK_TRANSFER",
-    label: "Bank Transfer",
-    referencePlaceholder: "UTR / transaction ID",
-  },
-  {
-    value: "CARD",
-    label: "Card",
-    referencePlaceholder: "Last 4 digits / slip no.",
-  },
-  {
-    value: "OTHER",
-    label: "Other",
-    referencePlaceholder: "Optional",
-  },
-];
+
 
 function todayKey() {
   const now = new Date();

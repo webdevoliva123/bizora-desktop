@@ -10,19 +10,15 @@ import {
     dailyEntryPayments,
     products,
 } from "@/lib/db/schema";
+import { PAYMENT_METHOD, PAYMENT_STATUS, PAYMENT_TYPE } from "@/common";
 
 export interface CreateDailyEntryInput {
     businessId: number;
     customerId: number;
-    paymentType: "IMMEDIATE" | "MONTHLY";
-    paymentStatus: "UNPAID" | "PARTIAL" | "PAID";
+    paymentType:PAYMENT_TYPE;
+    paymentStatus: PAYMENT_STATUS;
     paymentAmount: number;
-    paymentMethod:
-      | "CASH"
-      | "BANK_TRANSFER"
-      | "CARD"
-      | "OTHER"
-      | null;
+    paymentMethod:PAYMENT_METHOD | null
     paymentDate: string | null;
     paymentReference: string | null;
     notes: string | null;

@@ -365,6 +365,8 @@ export function ViewDailyEntryDialog({
 
         const data = (await response.json()) as DailyEntryDetail;
 
+        console.log({data})
+
         setEntry(data);
         setStatus("success");
       } catch (error) {
@@ -1299,7 +1301,7 @@ export function ViewDailyEntryDialog({
 
               {current && (
                 <div className="flex flex-col gap-2 sm:flex-row sm:items-center">
-                  <Button
+                  {!entry?.isQuickSaleEntry && <Button
                     type="button"
                     variant="outline"
                     onClick={() => {
@@ -1308,7 +1310,7 @@ export function ViewDailyEntryDialog({
                   >
                     <Printer />
                     Print Bill
-                  </Button>
+                  </Button>}
 
                   <Button type="button" variant="outline" onClick={startEdit}>
                     <Pencil />

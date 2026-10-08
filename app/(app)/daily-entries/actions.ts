@@ -11,23 +11,19 @@ import {
   createDailyEntry,
   type CreateDailyEntryInput,
 } from "@/lib/db/daily-entry-create";
-import { createQuickSale, QuickSalePaymentMethod } from "@/lib/db/quick-sale-create";
+import { createQuickSale } from "@/lib/db/quick-sale-create";
+import { PAYMENT_METHOD, PAYMENT_STATUS, PAYMENT_TYPE } from "@/common";
 
 export interface CreateDailyEntryActionInput {
     customerId: number | null;
   
-    paymentType: "IMMEDIATE" | "MONTHLY";
+    paymentType: PAYMENT_TYPE;
   
-    paymentStatus: "UNPAID" | "PARTIAL" | "PAID";
+    paymentStatus: PAYMENT_STATUS;
   
     paymentAmount: number;
   
-    paymentMethod:
-      | "CASH"
-      | "BANK_TRANSFER"
-      | "CARD"
-      | "OTHER"
-      | null;
+    paymentMethod: PAYMENT_METHOD | null;
   
     paymentDate: string | null;
   
@@ -89,7 +85,7 @@ export async function createDailyEntryAction(
         paymentType: input.paymentType,
         paymentStatus: input.paymentStatus,
         paymentAmount: input.paymentAmount,
-        paymentMethod: input.paymentMethod,
+        paymentMethod: input.paymentMethod as PAYMENT_METHOD || null,
         paymentDate: input.paymentDate,
         paymentReference: input.paymentReference,
         notes: input.notes,
@@ -154,7 +150,7 @@ export async function createDailyEntryAction(
   export interface UpdateDailyEntryActionInput {
     entryId: number;
     customerId: number | null;
-    paymentType: "IMMEDIATE" | "MONTHLY";
+    paymentType: PAYMENT_TYPE;
     notes: string | null;
     items: { productId: number | null; quantity: number }[];
   }
@@ -213,7 +209,7 @@ export async function createDailyEntryAction(
   export interface AddDailyEntryPaymentActionInput {
     entryId: number;
     amount: number; // paise
-    paymentMethod: "CASH" | "BANK_TRANSFER" | "CARD" | "OTHER";
+    paymentMethod: PAYMENT_METHOD
     paymentDate: string;
     reference: string | null;
     notes: string | null;
@@ -263,7 +259,7 @@ export async function createDailyEntryAction(
 
   export interface CreateQuickSaleActionInput {
     amount: number;
-    paymentMethod: QuickSalePaymentMethod;
+    paymentMethod: PAYMENT_METHOD;
     paymentDate: string;
     paymentReference: string | null;
     notes: string | null;

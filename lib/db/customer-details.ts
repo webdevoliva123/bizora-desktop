@@ -7,6 +7,7 @@ import {
   customerBusinessDetails,
   dailyEntries,
 } from "@/lib/db/schema";
+import { CUSTOMER_TYPE } from "@/common";
 
 export interface CustomerDetailsSummary {
   customerId: number;
@@ -20,7 +21,7 @@ export interface CustomerDetailsSummary {
 export interface CustomerDetailsData {
   id: number;
   businessId: number;
-  type: "PERSON" | "BUSINESS";
+  type: CUSTOMER_TYPE;
 
   phone: string | null;
   email: string | null;

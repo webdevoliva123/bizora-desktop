@@ -18,6 +18,7 @@ import {
 } from "@/lib/db/schema";
 
 import type { DailyEntryBill, DailyEntryDetail, DailyEntryListItem } from "@/lib/types/daily-entry";
+import { CUSTOMER_TYPE, PAYMENT_METHOD, PAYMENT_TYPE } from "@/common";
 
 export function getDailyEntries(
     businessId: number,
@@ -28,11 +29,11 @@ export function getDailyEntries(
             entryDate: dailyEntries.entryDate,
             createdAt: dailyEntries.createdAt,
 
-            customerType: sql<"PERSON" | "BUSINESS">`
+            customerType: sql<CUSTOMER_TYPE>`
             UPPER(${customers.type})
         `,
 
-        customerName: sql<string>`
+            customerName: sql<string>`
         CASE
           WHEN ${customers.isSystem} = 1
             AND ${customers.systemKey} = 'WALK_IN_CUSTOMER'
@@ -59,7 +60,7 @@ export function getDailyEntries(
 
             total: dailyEntries.total,
 
-            paymentType: sql<"IMMEDIATE" | "MONTHLY">`
+            paymentType: sql<PAYMENT_TYPE>`
             ${dailyEntries.paymentType}
         `,
 
@@ -186,9 +187,17 @@ export function getDailyEntryById(
 
             customerId: customers.id,
 
-            customerType: sql<"PERSON" | "BUSINESS">`
+            customerType: sql<CUSTOMER_TYPE>`
                 UPPER(${customers.type})
             `,
+
+            isQuickSaleEntry: sql<boolean>`
+            CASE
+              WHEN ${dailyEntries.entryType} = 'QUICK_SALE'
+              THEN 1
+              ELSE 0
+            END
+          `,
 
             customerName: sql<string>`
                 COALESCE(
@@ -210,7 +219,7 @@ export function getDailyEntryById(
             tax: dailyEntries.tax,
             total: dailyEntries.total,
 
-            paymentType: sql<"IMMEDIATE" | "MONTHLY">`
+            paymentType: sql<PAYMENT_TYPE>`
                 UPPER(${dailyEntries.paymentType})
             `,
 
@@ -277,7 +286,7 @@ export function getDailyEntryById(
             amount: dailyEntryPayments.amount,
 
             paymentMethod: sql<
-                "CASH" | "BANK_TRANSFER" | "CARD" | "OTHER"
+                PAYMENT_METHOD
             >`${dailyEntryPayments.paymentMethod}`,
 
             paymentDate: dailyEntryPayments.paymentDate,
@@ -317,6 +326,8 @@ export function getDailyEntryById(
     return {
         id: entry.id,
         entryDate: entry.entryDate,
+
+        isQuickSaleEntry : Boolean(entry.isQuickSaleEntry),
 
         customerId: entry.customerId,
         customerName: entry.customerName,
@@ -452,41 +463,41 @@ export function getDailyEntryBill(
         .orderBy(desc(businessRegistrations.id))
         .all();
 
-        return {
-            business,
-          
-            customer: {
-              id: entry.customerId,
-              name: entry.customerName,
-              type: entry.customerType,
-            },
-          
-            entry,
-          
-            paymentDetails: paymentDetails
-              ? {
-                  bankName: paymentDetails.bankName,
-                  accountName: paymentDetails.accountName,
-                  accountNumber:
+    return {
+        business,
+
+        customer: {
+            id: entry.customerId,
+            name: entry.customerName,
+            type: entry.customerType,
+        },
+
+        entry,
+
+        paymentDetails: paymentDetails
+            ? {
+                bankName: paymentDetails.bankName,
+                accountName: paymentDetails.accountName,
+                accountNumber:
                     paymentDetails.accountNumber,
-                  branchName: paymentDetails.branchName,
-                  routingCode:
+                branchName: paymentDetails.branchName,
+                routingCode:
                     paymentDetails.routingCode,
-                  paymentIdentifier:
+                paymentIdentifier:
                     paymentDetails.paymentIdentifier,
-                  qrImagePath:
+                qrImagePath:
                     paymentDetails.qrImagePath,
-                  showBankDetails:
+                showBankDetails:
                     paymentDetails.showBankDetails,
-                  showQr: paymentDetails.showQr,
-                  paymentInstructions:
+                showQr: paymentDetails.showQr,
+                paymentInstructions:
                     paymentDetails.paymentInstructions,
-                }
-              : null,
-          
-            taxRegistrations: taxRegistrationRows,
-          
-            businessRegistrations:
-              businessRegistrationRows,
-          };
+            }
+            : null,
+
+        taxRegistrations: taxRegistrationRows,
+
+        businessRegistrations:
+            businessRegistrationRows,
+    };
 }

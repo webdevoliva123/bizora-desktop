@@ -24,6 +24,7 @@ import {
 } from "@/components/ui/table";
 
 import type { MonthlyAccountPayment } from "@/lib/db/monthly-account";
+import { PAYMENT_METHOD } from "@/common";
 
 interface MonthlyPaymentHistoryProps {
   open: boolean;
@@ -69,10 +70,12 @@ function formatMonth(value: string): string {
   }).format(new Date(year, month - 1, 1));
 }
 
-function paymentMethodLabel(value: string): string {
+function paymentMethodLabel(value: PAYMENT_METHOD): string {
   switch (value) {
     case "CASH":
       return "Cash";
+    case "UPI":
+        return "UPI"
     case "BANK_TRANSFER":
       return "Bank Transfer";
     case "CARD":
@@ -147,7 +150,7 @@ export default function MonthlyPaymentHistory({
                 />
                 <Detail
                   label="Payment Method"
-                  value={paymentMethodLabel(selectedPayment.paymentMethod)}
+                  value={paymentMethodLabel(selectedPayment.paymentMethod as PAYMENT_METHOD)}
                 />
                 <Detail label="Reference" value={selectedPayment.reference} />
                 <Detail label="Notes" value={selectedPayment.notes} />
@@ -233,7 +236,8 @@ export default function MonthlyPaymentHistory({
                           </TableCell>
 
                           <TableCell className="px-4">
-                            {paymentMethodLabel(payment.paymentMethod)}
+                            {paymentMethodLabel(payment.paymentMethod as PAYMENT_METHOD
+                            )}
                           </TableCell>
 
                           <TableCell className="px-4 text-muted-foreground">

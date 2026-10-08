@@ -10,14 +10,15 @@ import {
   dailyEntryPayments,
   products,
 } from "@/lib/db/schema";
+import { PAYMENT_METHOD, PAYMENT_STATUS, PAYMENT_TYPE } from "@/common";
 
 type Tx = Parameters<Parameters<typeof db.transaction>[0]>[0];
-type PaymentType = "IMMEDIATE" | "MONTHLY";
-type PaymentStatus = "UNPAID" | "PARTIAL" | "PAID";
-type PaymentMethod = "CASH" | "BANK_TRANSFER" | "CARD" | "OTHER";
+type PaymentType = PAYMENT_TYPE;
+type PaymentStatus = PAYMENT_STATUS;
+type PaymentMethod = PAYMENT_METHOD;
 
 const DATE_PATTERN = /^\d{4}-\d{2}-\d{2}$/;
-const PAYMENT_METHODS: PaymentMethod[] = ["CASH", "BANK_TRANSFER", "CARD", "OTHER"];
+const PAYMENT_METHODS: PaymentMethod[] = ["CASH", "UPI" ,"BANK_TRANSFER", "CARD", "OTHER"];
 
 const rupees = (paise: number) => `₹${(paise / 100).toFixed(2)}`;
 

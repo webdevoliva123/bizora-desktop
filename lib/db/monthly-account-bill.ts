@@ -21,6 +21,7 @@ import {
   getMonthlyAccount,
   type MonthlyAccountStatus,
 } from "./monthly-account";
+import { CUSTOMER_TYPE } from "@/common";
 
 export interface MonthlyAccountBillItem {
   id: number;
@@ -73,7 +74,7 @@ export interface MonthlyAccountBill {
   customer: {
     id: number;
     name: string;
-    type: "PERSON" | "BUSINESS";
+    type: CUSTOMER_TYPE;
   };
 
   accountMonth: string;
@@ -182,7 +183,7 @@ export function getMonthlyAccountBill(
     .select({
       id: customers.id,
 
-      type: sql<"PERSON" | "BUSINESS">`
+      type: sql<CUSTOMER_TYPE>`
         UPPER(${customers.type})
       `,
 

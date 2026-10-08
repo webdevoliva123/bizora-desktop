@@ -10,17 +10,15 @@ import {
   dailyEntryPayments,
   products,
 } from "@/lib/db/schema";
+import { PAYMENT_METHOD } from "@/common";
+import { PaymentMethod } from "@/app/(app)/daily-entries/components/payment-options";
 
-export type QuickSalePaymentMethod =
-  | "CASH"
-  | "BANK_TRANSFER"
-  | "CARD"
-  | "OTHER";
+
 
 export interface CreateQuickSaleInput {
   businessId: number;
   amount: number; // paise
-  paymentMethod: QuickSalePaymentMethod;
+  paymentMethod: PAYMENT_METHOD;
   paymentDate: string;
   paymentReference: string | null;
   notes: string | null;
@@ -31,7 +29,8 @@ export interface CreateQuickSaleResult {
 }
 
 const WALK_IN_CUSTOMER_KEY = "WALK_IN_CUSTOMER";
-const QUICK_SALE_PRODUCT_KEY = "QUICK_SALE";
+const QUICK_SALE_PRODUCT_KEY_AND_ENTRY_TYPE = "QUICK_SALE";
+const PAYMENT_METHODS: PaymentMethod[] = ["CASH", "UPI" ,"BANK_TRANSFER", "CARD", "OTHER"];
 
 export function createQuickSale(
   input: CreateQuickSaleInput,
@@ -44,12 +43,7 @@ export function createQuickSale(
     throw new Error("Sale amount must be greater than zero.");
   }
 
-  if (
-    input.paymentMethod !== "CASH" &&
-    input.paymentMethod !== "BANK_TRANSFER" &&
-    input.paymentMethod !== "CARD" &&
-    input.paymentMethod !== "OTHER"
-  ) {
+  if (!PAYMENT_METHODS.includes(input.paymentMethod)) {
     throw new Error("Invalid payment method.");
   }
 
@@ -96,7 +90,7 @@ export function createQuickSale(
         and(
           eq(products.businessId, input.businessId),
           eq(products.isSystem, true),
-          eq(products.systemKey, QUICK_SALE_PRODUCT_KEY),
+          eq(products.systemKey, QUICK_SALE_PRODUCT_KEY_AND_ENTRY_TYPE),
           eq(products.active, true),
         ),
       )
@@ -125,6 +119,7 @@ export function createQuickSale(
         customerId: walkInCustomer.id,
 
         entryDate,
+        entryType : QUICK_SALE_PRODUCT_KEY_AND_ENTRY_TYPE,
 
         subtotal: input.amount,
         discount: 0,

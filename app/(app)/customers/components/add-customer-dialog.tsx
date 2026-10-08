@@ -16,11 +16,12 @@ import {
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { cn } from "@/lib/utils";
+import { CUSTOMER_TYPE } from "@/common";
 
-type CustomerType = "PERSON" | "BUSINESS";
+
 
 interface FormState {
-  type: CustomerType;
+  type: CUSTOMER_TYPE;
 
   firstName: string;
   lastName: string;
