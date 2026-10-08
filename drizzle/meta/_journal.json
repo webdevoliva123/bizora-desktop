@@ -36,6 +36,13 @@
       "when": 1791149155209,
       "tag": "0004_right_vulture",
       "breakpoints": true
+    },
+    {
+      "idx": 5,
+      "version": "6",
+      "when": 1791480561946,
+      "tag": "0005_salty_valeria_richards",
+      "breakpoints": true
     }
   ]
 }

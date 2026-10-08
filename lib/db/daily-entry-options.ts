@@ -1,6 +1,6 @@
 import "server-only";
 
-import { eq } from "drizzle-orm";
+import { and, eq } from "drizzle-orm";
 
 import { db } from "@/lib/db";
 import {
@@ -42,7 +42,13 @@ export function getCustomersForDailyEntry(
         customerBusinessDetails,
         eq(customerBusinessDetails.customerId, customers.id),
       )
-      .where(eq(customers.businessId, businessId))
+      .where(
+        and(
+          eq(customers.businessId, businessId),
+          eq(customers.active, true),
+          eq(customers.isSystem, false),
+        ),
+      )
       .all();
   
     return customerRows.map((customer) => {
@@ -73,6 +79,10 @@ export function getProductsForDailyEntry(
       taxRate: products.taxRate,
     })
     .from(products)
-    .where(eq(products.businessId, businessId))
+    .where(and(
+        eq(products.businessId, businessId),
+        eq(products.active, true),
+        eq(products.isSystem, false)
+    ))
     .all();
 }

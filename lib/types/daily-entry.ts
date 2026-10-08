@@ -1,3 +1,11 @@
+export const DAILY_ENTRY_TYPES = {
+    CUSTOMER_SALE: "CUSTOMER_SALE",
+    QUICK_SALE: "QUICK_SALE",
+  } as const;
+  
+  export type DailyEntryType =
+    (typeof DAILY_ENTRY_TYPES)[keyof typeof DAILY_ENTRY_TYPES];
+
 export interface DailyEntryListItem {
     id: number;
     entryDate: string;

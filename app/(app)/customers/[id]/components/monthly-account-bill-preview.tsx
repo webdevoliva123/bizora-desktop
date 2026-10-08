@@ -27,6 +27,7 @@ import {
     DialogTitle,
 } from "@/components/ui/dialog";
 import { Skeleton } from "@/components/ui/skeleton";
+import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { getFileUrl } from "@/lib/files/urls";
 import type { MonthlyAccountBill } from "@/lib/db/monthly-account-bill";
 
@@ -42,6 +43,8 @@ const PRINT_PAGE_STYLE = `
   html, body { background: #fff; margin: 0; }
   * { -webkit-print-color-adjust: exact; print-color-adjust: exact; }
   .bill-export { width: 100% !important; }
+  thead { display: table-header-group; }
+  tr { break-inside: avoid; }
 `;
 
 type LoadStatus = "idle" | "loading" | "success" | "error";
@@ -49,6 +52,29 @@ type LoadStatus = "idle" | "loading" | "success" | "error";
 type MonthlyAccountStatus = "UNPAID" | "PARTIAL" | "PAID";
 
 type BillEntry = MonthlyAccountBill["entries"][number];
+
+type PrintMode = "summary" | "full" | "none";
+
+const PRINT_MODES: { value: PrintMode; label: string; hint: string }[] = [
+    {
+        value: "summary",
+        label: "Summary",
+        hint: "Entries with their product count. Products are not listed.",
+    },
+    {
+        value: "full",
+        label: "Full entries",
+        hint: "Every entry with all its products, in a compact layout.",
+    },
+    {
+        value: "none",
+        label: "No entries",
+        hint: "Bill details, totals and payments only.",
+    },
+];
+
+const isPrintMode = (value: string): value is PrintMode =>
+    PRINT_MODES.some((mode) => mode.value === value);
 
 /* -------------------------------------------------------------------------- */
 /* Helpers                                                                    */
@@ -127,7 +153,7 @@ interface BreakBlock {
 }
 
 /**
- * Measures every element marked `break-inside-avoid` (entry blocks, table
+ * Measures every element marked `break-inside-avoid` (entry groups, table
  * rows, summary and footer sections) in canvas pixels, so the PDF slicer
  * knows where it must not cut.
  */
@@ -176,136 +202,215 @@ function findSliceEnd(
 }
 
 /* -------------------------------------------------------------------------- */
-/* Entry block (entry header + its products)                                  */
+/* Entries: summary (entry rows + product count)                              */
 /* -------------------------------------------------------------------------- */
 
-function EntryBlock({
-    entry,
-    index,
+function EntriesSummaryTable({
+    entries,
     money,
 }: {
-    entry: BillEntry;
-    index: number;
+    entries: BillEntry[];
     money: (amount: number) => string;
 }) {
-    const showBreakdown = entry.discount > 0 || entry.tax > 0;
-
     return (
-        <div className="break-inside-avoid overflow-hidden rounded-xl border border-slate-200">
-            {/* Entry header */}
-            <div className="flex items-center justify-between gap-4 border-b border-slate-200 bg-slate-50 px-4 py-2.5">
-                <div>
-                    <p className="font-medium">
-                        {index + 1}. {formatDate(entry.entryDate)}
-                    </p>
-
-                    <p className="text-xs text-slate-500">
-                        Entry #{entry.id} · {entry.items.length}{" "}
-                        {entry.items.length === 1 ? "item" : "items"}
-                    </p>
-                </div>
-
-                <p className="font-semibold tabular-nums">
-                    {money(entry.total)}
-                </p>
-            </div>
-
-            {/* Products */}
-            <table className="w-full text-sm">
-                <thead>
-                    <tr className="border-b border-slate-200 text-xs text-slate-500">
-                        <th className="px-4 py-2 text-left font-medium">
-                            Product
+        <div className="overflow-hidden rounded-lg border border-slate-200">
+            <table className="w-full text-xs">
+                <thead className="bg-slate-50">
+                    <tr className="border-b border-slate-200 text-slate-600">
+                        <th className="w-10 px-3 py-2 text-left font-medium">
+                            #
                         </th>
 
-                        <th className="px-4 py-2 text-right font-medium">
-                            Qty
+                        <th className="px-3 py-2 text-left font-medium">
+                            Entry Date
                         </th>
 
-                        <th className="px-4 py-2 text-right font-medium">
-                            Rate
+                        <th className="px-3 py-2 text-left font-medium">
+                            Entry
                         </th>
 
-                        <th className="px-4 py-2 text-right font-medium">
-                            Tax
+                        <th className="px-3 py-2 text-right font-medium">
+                            Products
                         </th>
 
-                        <th className="px-4 py-2 text-right font-medium">
+                        <th className="px-3 py-2 text-right font-medium">
                             Amount
                         </th>
                     </tr>
                 </thead>
 
                 <tbody>
-                    {entry.items.map((item) => (
+                    {entries.map((entry, index) => (
                         <tr
-                            key={item.id}
+                            key={entry.id}
                             className="break-inside-avoid border-b border-slate-100 last:border-b-0"
                         >
-                            <td className="px-4 py-2">
-                                {item.productName}
+                            <td className="px-3 py-1.5 text-slate-500 tabular-nums">
+                                {index + 1}
                             </td>
 
-                            <td className="px-4 py-2 text-right whitespace-nowrap tabular-nums">
-                                {formatQuantity(item.quantity)} {item.unit}
+                            <td className="px-3 py-1.5 font-medium whitespace-nowrap">
+                                {formatDate(entry.entryDate)}
                             </td>
 
-                            <td className="px-4 py-2 text-right tabular-nums">
-                                {money(item.unitPrice)}
+                            <td className="px-3 py-1.5 text-slate-500">
+                                #{entry.id}
                             </td>
 
-                            <td className="px-4 py-2 text-right text-slate-500 tabular-nums">
-                                {item.taxRate > 0 ? `${item.taxRate}%` : "—"}
+                            <td className="px-3 py-1.5 text-right tabular-nums">
+                                {entry.items.length}
                             </td>
 
-                            <td className="px-4 py-2 text-right font-medium tabular-nums">
-                                {money(item.total)}
+                            <td className="px-3 py-1.5 text-right font-medium tabular-nums">
+                                {money(entry.total)}
                             </td>
                         </tr>
                     ))}
 
-                    {entry.items.length === 0 && (
+                    {entries.length === 0 && (
                         <tr>
                             <td
                                 colSpan={5}
-                                className="px-4 py-4 text-center text-xs text-slate-500"
+                                className="px-3 py-6 text-center text-slate-500"
                             >
-                                No items in this entry.
+                                No monthly entries for this period.
                             </td>
                         </tr>
                     )}
                 </tbody>
             </table>
+        </div>
+    );
+}
 
-            {/* Entry breakdown (only when there is a discount or tax) */}
-            {showBreakdown && (
-                <div className="flex flex-wrap justify-end gap-x-6 gap-y-1 border-t border-slate-200 bg-slate-50/60 px-4 py-2 text-xs text-slate-500">
-                    <span>
-                        Subtotal{" "}
-                        <span className="tabular-nums">
-                            {money(entry.subtotal)}
-                        </span>
-                    </span>
+/* -------------------------------------------------------------------------- */
+/* Entries: full (one compact table, entry band + product rows)               */
+/* -------------------------------------------------------------------------- */
 
-                    {entry.discount > 0 && (
-                        <span>
-                            Discount{" "}
-                            <span className="tabular-nums">
-                                −{money(entry.discount)}
-                            </span>
-                        </span>
-                    )}
+function EntriesFullTable({
+    entries,
+    money,
+}: {
+    entries: BillEntry[];
+    money: (amount: number) => string;
+}) {
+    return (
+        <div className="overflow-hidden rounded-lg border border-slate-200">
+            <table className="w-full text-[11px] leading-tight">
+                <thead className="bg-slate-50">
+                    <tr className="border-b border-slate-200 text-slate-600">
+                        <th className="px-3 py-1.5 text-left font-medium">
+                            Product
+                        </th>
 
-                    {entry.tax > 0 && (
-                        <span>
-                            Tax{" "}
-                            <span className="tabular-nums">
-                                {money(entry.tax)}
-                            </span>
-                        </span>
-                    )}
-                </div>
-            )}
+                        <th className="px-3 py-1.5 text-right font-medium">
+                            Qty
+                        </th>
+
+                        <th className="px-3 py-1.5 text-right font-medium">
+                            Rate
+                        </th>
+
+                        <th className="px-3 py-1.5 text-right font-medium">
+                            Tax
+                        </th>
+
+                        <th className="px-3 py-1.5 text-right font-medium">
+                            Amount
+                        </th>
+                    </tr>
+                </thead>
+
+                {entries.map((entry, index) => {
+                    const extras = [
+                        entry.discount > 0
+                            ? `Disc −${money(entry.discount)}`
+                            : null,
+                        entry.tax > 0 ? `Tax ${money(entry.tax)}` : null,
+                    ].filter(Boolean);
+
+                    return (
+                        <tbody
+                            key={entry.id}
+                            className="break-inside-avoid border-t border-slate-200 first:border-t-0"
+                        >
+                            {/* Entry band */}
+                            <tr className="bg-slate-100/80">
+                                <td
+                                    colSpan={4}
+                                    className="px-3 py-1 font-semibold"
+                                >
+                                    {index + 1}. {formatDate(entry.entryDate)}
+                                    <span className="ml-2 font-normal text-slate-500">
+                                        Entry #{entry.id}
+                                        {extras.length > 0 &&
+                                            ` · ${extras.join(" · ")}`}
+                                    </span>
+                                </td>
+
+                                <td className="px-3 py-1 text-right font-semibold tabular-nums">
+                                    {money(entry.total)}
+                                </td>
+                            </tr>
+
+                            {/* Products */}
+                            {entry.items.map((item) => (
+                                <tr
+                                    key={item.id}
+                                    className="break-inside-avoid"
+                                >
+                                    <td className="py-0.5 pr-3 pl-6">
+                                        {item.productName}
+                                    </td>
+
+                                    <td className="px-3 py-0.5 text-right whitespace-nowrap tabular-nums">
+                                        {formatQuantity(item.quantity)}{" "}
+                                        {item.unit}
+                                    </td>
+
+                                    <td className="px-3 py-0.5 text-right tabular-nums">
+                                        {money(item.unitPrice)}
+                                    </td>
+
+                                    <td className="px-3 py-0.5 text-right text-slate-500 tabular-nums">
+                                        {item.taxRate > 0
+                                            ? `${item.taxRate}%`
+                                            : "—"}
+                                    </td>
+
+                                    <td className="px-3 py-0.5 text-right tabular-nums">
+                                        {money(item.total)}
+                                    </td>
+                                </tr>
+                            ))}
+
+                            {entry.items.length === 0 && (
+                                <tr>
+                                    <td
+                                        colSpan={5}
+                                        className="py-0.5 pl-6 text-slate-500"
+                                    >
+                                        No items in this entry.
+                                    </td>
+                                </tr>
+                            )}
+                        </tbody>
+                    );
+                })}
+
+                {entries.length === 0 && (
+                    <tbody>
+                        <tr>
+                            <td
+                                colSpan={5}
+                                className="px-3 py-6 text-center text-slate-500"
+                            >
+                                No monthly entries for this period.
+                            </td>
+                        </tr>
+                    </tbody>
+                )}
+            </table>
         </div>
     );
 }
@@ -314,7 +419,13 @@ function EntryBlock({
 /* Bill Document                                                              */
 /* -------------------------------------------------------------------------- */
 
-function BillDocument({ bill }: { bill: MonthlyAccountBill }) {
+function BillDocument({
+    bill,
+    mode,
+}: {
+    bill: MonthlyAccountBill;
+    mode: PrintMode;
+}) {
     const { business, customer } = bill;
 
     const details = bill.paymentDetails;
@@ -364,6 +475,8 @@ function BillDocument({ bill }: { bill: MonthlyAccountBill }) {
                 value: registration.registrationNumber,
             })),
     ];
+
+    const showEntries = mode !== "none";
 
     return (
         <div className="text-sm leading-normal text-slate-900">
@@ -464,42 +577,41 @@ function BillDocument({ bill }: { bill: MonthlyAccountBill }) {
                 </div>
             </div>
 
-            {/* Account Period */}
+            {/* Entries (hidden in "No entries" mode) */}
 
-            <div className="py-6">
-                <div className="mb-4">
-                    <h3 className="text-base font-semibold">
-                        Monthly Account — {formatMonth(bill.accountMonth)}
-                    </h3>
+            {showEntries && (
+                <div className="py-6">
+                    <div className="mb-3">
+                        <h3 className="text-base font-semibold">
+                            Monthly Account — {formatMonth(bill.accountMonth)}
+                        </h3>
 
-                    <p className="mt-1 text-sm text-slate-500">
-                        Monthly sales and payments for this customer.
-                    </p>
-                </div>
+                        <p className="mt-1 text-sm text-slate-500">
+                            {bill.entries.length}{" "}
+                            {bill.entries.length === 1 ? "entry" : "entries"}
+                            {mode === "summary" &&
+                                " · product count shown per entry"}
+                        </p>
+                    </div>
 
-                {/* Entries with their products */}
-
-                <div className="space-y-4">
-                    {bill.entries.map((entry, index) => (
-                        <EntryBlock
-                            key={entry.id}
-                            entry={entry}
-                            index={index}
+                    {mode === "full" ? (
+                        <EntriesFullTable entries={bill.entries} money={money} />
+                    ) : (
+                        <EntriesSummaryTable
+                            entries={bill.entries}
                             money={money}
                         />
-                    ))}
-
-                    {bill.entries.length === 0 && (
-                        <div className="rounded-xl border border-slate-200 px-4 py-8 text-center text-sm text-slate-500">
-                            No monthly entries for this period.
-                        </div>
                     )}
                 </div>
-            </div>
+            )}
 
             {/* Account Summary */}
 
-            <div className="flex justify-end break-inside-avoid">
+            <div
+                className={`flex justify-end break-inside-avoid ${
+                    showEntries ? "" : "pt-6"
+                }`}
+            >
                 <div className="w-full max-w-[320px] space-y-3">
                     <div className="flex justify-between text-sm">
                         <span className="text-slate-500">Monthly Total</span>
@@ -742,6 +854,8 @@ export function MonthlyAccountBillPreview({
 
     const [reloadKey, setReloadKey] = useState(0);
 
+    const [mode, setMode] = useState<PrintMode>("summary");
+
     const [isExporting, setIsExporting] = useState(false);
 
     const [exportError, setExportError] = useState<string | null>(null);
@@ -809,6 +923,11 @@ export function MonthlyAccountBillPreview({
         setExportError(null);
     }, [open, customerId, accountMonth]);
 
+    // Summary is the default every time the dialog opens
+    useEffect(() => {
+        if (open) setMode("summary");
+    }, [open]);
+
     /* ---------------------------------------------------------------------- */
     /* Current bill                                                           */
     /* ---------------------------------------------------------------------- */
@@ -829,6 +948,10 @@ export function MonthlyAccountBillPreview({
               current.customer.name,
           )}`
         : "Monthly-Account";
+
+    const activeMode =
+        PRINT_MODES.find((option) => option.value === mode) ??
+        PRINT_MODES[0];
 
     /* ---------------------------------------------------------------------- */
     /* Print                                                                   */
@@ -1014,6 +1137,33 @@ export function MonthlyAccountBillPreview({
                         </DialogDescription>
                     </DialogHeader>
 
+                    {/* Print mode */}
+
+                    <div className="flex shrink-0 flex-col gap-2 border-b px-6 py-3 sm:flex-row sm:items-center sm:justify-between">
+                        <Tabs
+                            value={mode}
+                            onValueChange={(value) => {
+                                if (isPrintMode(value)) setMode(value);
+                            }}
+                        >
+                            <TabsList>
+                                {PRINT_MODES.map((option) => (
+                                    <TabsTrigger
+                                        key={option.value}
+                                        value={option.value}
+                                        disabled={isExporting}
+                                    >
+                                        {option.label}
+                                    </TabsTrigger>
+                                ))}
+                            </TabsList>
+                        </Tabs>
+
+                        <p className="text-xs text-muted-foreground">
+                            {activeMode.hint}
+                        </p>
+                    </div>
+
                     {/* Scrollable preview */}
 
                     <div className="min-h-0 flex-1 overflow-auto bg-muted/50 p-4 sm:p-6">
@@ -1069,7 +1219,7 @@ export function MonthlyAccountBillPreview({
                         {current && (
                             <div className="overflow-x-auto">
                                 <div className="mx-auto max-w-[794px] min-w-[640px] rounded-sm bg-white p-8 text-slate-900 shadow-sm ring-1 ring-slate-200 sm:p-12">
-                                    <BillDocument bill={current} />
+                                    <BillDocument bill={current} mode={mode} />
                                 </div>
                             </div>
                         )}
@@ -1140,7 +1290,7 @@ export function MonthlyAccountBillPreview({
                             className="bill-export bg-white text-slate-900"
                             style={{ width: BILL_WIDTH }}
                         >
-                            <BillDocument bill={current} />
+                            <BillDocument bill={current} mode={mode} />
                         </div>
                     </div>,
                     document.body,

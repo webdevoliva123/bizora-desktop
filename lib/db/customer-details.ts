@@ -110,39 +110,40 @@ export function getCustomerDetails(
   }
 
   const summaryRow = db
-    .select({
-      totalEntries: sql<number>`COUNT(${dailyEntries.id})`,
+  .select({
+    totalEntries: sql<number>`COUNT(${dailyEntries.id})`,
 
-      totalSales: sql<number>`
-        COALESCE(SUM(${dailyEntries.total}), 0)
-      `,
+    totalSales: sql<number>`
+      COALESCE(SUM(${dailyEntries.total}), 0)
+    `,
 
-      totalPaid: sql<number>`
-        COALESCE(
-          SUM(
-            CASE
-              WHEN ${dailyEntries.paymentStatus} = 'PAID'
-              THEN ${dailyEntries.total}
-              ELSE 0
-            END
-          ),
-          0
-        )
-      `,
-    })
-    .from(dailyEntries)
-    .where(
-      and(
-        eq(dailyEntries.businessId, businessId),
-        eq(dailyEntries.customerId, customerId),
-      ),
-    ).all();
+    totalPaid: sql<number>`
+      COALESCE(
+        SUM(
+          CASE
+            WHEN ${dailyEntries.paymentStatus} = 'PAID'
+            THEN ${dailyEntries.total}
+            ELSE 0
+          END
+        ),
+        0
+      )
+    `,
+  })
+  .from(dailyEntries)
+  .where(
+    and(
+      eq(dailyEntries.businessId, businessId),
+      eq(dailyEntries.customerId, customerId),
+    ),
+  )
+  .all();
 
-  const summary = summaryRow[0];
+const summary = summaryRow[0];
 
-  const totalEntries = Number(summary?.totalEntries ?? 0);
-  const totalSales = Number(summary?.totalSales ?? 0);
-  const totalPaid = Number(summary?.totalPaid ?? 0);
+const totalEntries = Number(summary?.totalEntries ?? 0);
+const totalSales = Number(summary?.totalSales ?? 0);
+const totalPaid = Number(summary?.totalPaid ?? 0);
 
   return {
     id: row.id,

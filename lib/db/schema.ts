@@ -208,7 +208,15 @@ import {
       })
         .notNull()
         .default(true),
-  
+      
+      isSystem: integer("is_system", {
+        mode: "boolean",
+      })
+        .notNull()
+        .default(false),
+      
+      systemKey: text("system_key"),
+      
       createdAt: text("created_at").notNull(),
       updatedAt: text("updated_at").notNull(),
     },
@@ -216,6 +224,10 @@ import {
       index("customers_business_id_idx").on(table.businessId),
       index("customers_phone_idx").on(table.phone),
       index("customers_email_idx").on(table.email),
+      index("customers_business_system_key_idx").on(
+        table.businessId,
+        table.systemKey,
+      ),
     ],
   );
   
@@ -373,19 +385,27 @@ import {
       })
         .notNull()
         .default(true),
-  
+      
+      isSystem: integer("is_system", {
+        mode: "boolean",
+      })
+        .notNull()
+        .default(false),
+      
+      systemKey: text("system_key"),
+      
       createdAt: text("created_at").notNull(),
       updatedAt: text("updated_at").notNull(),
     },
     (table) => [
       index("products_business_id_idx").on(table.businessId),
       index("products_category_id_idx").on(table.categoryId),
+      index("products_business_system_key_idx").on(
+        table.businessId,
+        table.systemKey,
+      ),
     ],
   );
-  
-  /* -------------------------------------------------------------------------- */
-  /* Daily Entries                                                              */
-  /* -------------------------------------------------------------------------- */
   
   export const dailyEntries = sqliteTable(
     "daily_entries",
@@ -404,27 +424,32 @@ import {
           onDelete: "restrict",
         }),
   
+      /**
+       * CUSTOMER_SALE | QUICK_SALE
+       *
+       * CUSTOMER_SALE:
+       * Normal sale against a known customer.
+       *
+       * QUICK_SALE:
+       * Fast counter sale without creating/selecting a customer.
+       * Uses the system Walk-in Customer and Quick Sale product.
+       */
+      entryType: text("entry_type")
+        .notNull()
+        .default("CUSTOMER_SALE"),
+  
       entryDate: text("entry_date").notNull(),
   
       /**
        * Money stored in minor currency units.
        */
       subtotal: integer("subtotal").notNull().default(0),
-  
       discount: integer("discount").notNull().default(0),
-  
       tax: integer("tax").notNull().default(0),
-  
       total: integer("total").notNull().default(0),
   
       /**
        * IMMEDIATE | MONTHLY
-       *
-       * IMMEDIATE:
-       * Payment is handled against this individual entry.
-       *
-       * MONTHLY:
-       * This entry becomes part of the customer's monthly account.
        */
       paymentType: text("payment_type")
         .notNull()
@@ -440,14 +465,17 @@ import {
       notes: text("notes"),
   
       createdAt: text("created_at").notNull(),
-  
       updatedAt: text("updated_at").notNull(),
     },
-  
     (table) => [
       index("daily_entries_business_id_idx").on(table.businessId),
+  
       index("daily_entries_customer_id_idx").on(table.customerId),
+  
+      index("daily_entries_entry_type_idx").on(table.entryType),
+  
       index("daily_entries_entry_date_idx").on(table.entryDate),
+  
       index("daily_entries_payment_type_idx").on(table.paymentType),
     ],
   );

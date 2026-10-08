@@ -1,3 +1,4 @@
+
 "use client";
 
 import { useEffect, useState } from "react";
@@ -37,6 +38,8 @@ export default function DeleteCustomerDialog({
   const [deleting, setDeleting] = useState(false);
   const [error, setError] = useState("");
 
+  const hasHistory = entryCount > 0;
+
   useEffect(() => {
     if (open) {
       setTyped("");
@@ -44,10 +47,12 @@ export default function DeleteCustomerDialog({
     }
   }, [open]);
 
-  const nameLabel = customerType === "BUSINESS" ? "business name" : "customer name";
+  const nameLabel =
+    customerType === "BUSINESS" ? "business name" : "customer name";
+
   const matches = typed.trim() === customerName;
 
-  async function handleDelete() {
+  async function handleDeleteOrDeactivate() {
     if (!matches) return;
 
     try {
@@ -58,43 +63,78 @@ export default function DeleteCustomerDialog({
         method: "DELETE",
       });
 
+      const data = await response.json().catch(() => ({}));
+
       if (!response.ok) {
-        const data = await response.json().catch(() => ({}));
-        throw new Error(data?.error || "Failed to delete customer.");
+        throw new Error(
+          data?.error ||
+            `Failed to ${hasHistory ? "deactivate" : "delete"} customer.`,
+        );
       }
 
       onOpenChange(false);
       onDeleted();
     } catch (err) {
-      setError(err instanceof Error ? err.message : "Failed to delete customer.");
+      setError(
+        err instanceof Error
+          ? err.message
+          : `Failed to ${hasHistory ? "deactivate" : "delete"} customer.`,
+      );
     } finally {
       setDeleting(false);
     }
   }
 
   return (
-    <Dialog open={open} onOpenChange={(next) => !deleting && onOpenChange(next)}>
+    <Dialog
+      open={open}
+      onOpenChange={(next) => !deleting && onOpenChange(next)}
+    >
       <DialogContent className="sm:max-w-md">
         <DialogHeader>
-          <DialogTitle>Delete customer</DialogTitle>
+          <DialogTitle>
+            {hasHistory ? "Deactivate customer" : "Delete customer"}
+          </DialogTitle>
+
           <DialogDescription>
-            This action is permanent and can't be undone.
+            {hasHistory
+              ? "This customer has transaction history, so they will be deactivated instead of permanently deleted."
+              : "This customer has no transaction history and can be permanently deleted."}
           </DialogDescription>
         </DialogHeader>
 
         <div className="rounded-lg border border-destructive/30 bg-destructive/5 p-3 text-sm">
-          Deleting <span className="font-semibold">{customerName}</span> will also
-          permanently delete{" "}
-          <span className="font-semibold">
-            {entryCount} {entryCount === 1 ? "entry" : "entries"}
-          </span>{" "}
-          and all payments recorded against them.
+          {hasHistory ? (
+            <>
+              <span className="font-semibold">{customerName}</span> has{" "}
+              <span className="font-semibold">
+                {entryCount} {entryCount === 1 ? "entry" : "entries"}
+              </span>{" "}
+              in the system.
+              <br />
+              <br />
+              The customer will be <strong>deactivated</strong>. Their
+              entries, invoices, and payments will be preserved and will not
+              be deleted.
+            </>
+          ) : (
+            <>
+              <span className="font-semibold">{customerName}</span> has no
+              transaction history.
+              <br />
+              <br />
+              The customer and their basic details will be permanently
+              deleted. This action cannot be undone.
+            </>
+          )}
         </div>
 
         <div className="space-y-1.5">
           <Label htmlFor="confirm-name">
-            Type <span className="font-semibold">{customerName}</span> to confirm
+            Type{" "}
+            <span className="font-semibold">{customerName}</span> to confirm
           </Label>
+
           <Input
             id="confirm-name"
             value={typed}
@@ -102,7 +142,9 @@ export default function DeleteCustomerDialog({
             placeholder={`Enter ${nameLabel}`}
             onChange={(e) => setTyped(e.target.value)}
             onKeyDown={(e) => {
-              if (e.key === "Enter") void handleDelete();
+              if (e.key === "Enter") {
+                void handleDeleteOrDeactivate();
+              }
             }}
           />
         </div>
@@ -110,15 +152,26 @@ export default function DeleteCustomerDialog({
         {error && <p className="text-sm text-destructive">{error}</p>}
 
         <DialogFooter>
-          <Button variant="outline" disabled={deleting} onClick={() => onOpenChange(false)}>
+          <Button
+            variant="outline"
+            disabled={deleting}
+            onClick={() => onOpenChange(false)}
+          >
             Cancel
           </Button>
+
           <Button
             variant="destructive"
             disabled={!matches || deleting}
-            onClick={handleDelete}
+            onClick={handleDeleteOrDeactivate}
           >
-            {deleting ? "Deleting..." : "Delete customer and entries"}
+            {deleting
+              ? hasHistory
+                ? "Deactivating..."
+                : "Deleting..."
+              : hasHistory
+                ? "Deactivate customer"
+                : "Delete customer"}
           </Button>
         </DialogFooter>
       </DialogContent>
