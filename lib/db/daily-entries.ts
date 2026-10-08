@@ -27,6 +27,14 @@ export function getDailyEntries(
         .select({
             id: dailyEntries.id,
             entryDate: dailyEntries.entryDate,
+            isQuickSaleEntry: sql<boolean>`
+            CASE
+              WHEN ${dailyEntries.entryType} = 'QUICK_SALE'
+              THEN 1
+              ELSE 0
+            END
+          `,
+
             createdAt: dailyEntries.createdAt,
 
             customerType: sql<CUSTOMER_TYPE>`
@@ -37,7 +45,7 @@ export function getDailyEntries(
         CASE
           WHEN ${customers.isSystem} = 1
             AND ${customers.systemKey} = 'WALK_IN_CUSTOMER'
-          THEN 'Quick Sale'
+          THEN 'Walk In Customer'
       
           ELSE COALESCE(
             NULLIF(
@@ -164,6 +172,7 @@ export function getDailyEntries(
     return entries.map((entry) => ({
         id: entry.id,
         entryDate: entry.entryDate,
+        isQuickSaleEntry : Boolean(entry.isQuickSaleEntry),
         createdAt: entry.createdAt,
         customerName: entry.customerName,
         customerType: entry.customerType,

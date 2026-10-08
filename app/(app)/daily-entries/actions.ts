@@ -13,6 +13,8 @@ import {
 } from "@/lib/db/daily-entry-create";
 import { createQuickSale } from "@/lib/db/quick-sale-create";
 import { PAYMENT_METHOD, PAYMENT_STATUS, PAYMENT_TYPE } from "@/common";
+import { isPaymentMethod } from "./components/payment-options";
+import { updateQuickSale } from "@/lib/db/quick-sale-mutations";
 
 export interface CreateDailyEntryActionInput {
     customerId: number | null;
@@ -319,6 +321,82 @@ export async function createDailyEntryAction(
           error instanceof Error
             ? error.message
             : "Failed to create quick sale.",
+      };
+    }
+  }
+
+  export interface UpdateQuickSaleActionInput {
+    entryId: number;
+    amount: number; // paise
+    paymentMethod: PAYMENT_METHOD;
+    reference: string | null;
+    notes: string | null;
+  }
+  
+  export async function updateQuickSaleAction(
+    input: UpdateQuickSaleActionInput,
+  ): Promise<
+    | { success: true; id: number }
+    | { success: false; error: string }
+  > {
+    try {
+      const businessId = await getBusinessId();
+  
+      if (!businessId) {
+        return {
+          success: false,
+          error: "Business setup is incomplete.",
+        };
+      }
+  
+      if (!Number.isInteger(input.entryId) || input.entryId <= 0) {
+        return {
+          success: false,
+          error: "Invalid quick sale.",
+        };
+      }
+  
+      if (!Number.isInteger(input.amount) || input.amount <= 0) {
+        return {
+          success: false,
+          error: "Sale amount must be greater than zero.",
+        };
+      }
+  
+      if (!isPaymentMethod(input.paymentMethod)) {
+        return {
+          success: false,
+          error: "Invalid payment method.",
+        };
+      }
+  
+      const result = updateQuickSale({
+        businessId,
+        entryId: input.entryId,
+        amount: input.amount,
+        paymentMethod: input.paymentMethod,
+        reference: input.reference,
+        notes: input.notes,
+      });
+  
+      revalidateDailyEntries();
+  
+      return {
+        success: true,
+        id: result.id,
+      };
+    } catch (error) {
+      console.error(
+        "[daily-entries] Failed to update quick sale:",
+        error,
+      );
+  
+      return {
+        success: false,
+        error:
+          error instanceof Error
+            ? error.message
+            : "Failed to update quick sale.",
       };
     }
   }

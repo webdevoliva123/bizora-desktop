@@ -62,6 +62,7 @@ import {
   addDailyEntryPaymentAction,
   deleteDailyEntryAction,
   updateDailyEntryAction,
+  updateQuickSaleAction,
 } from "../actions";
 import {
   DATE_KEY_PATTERN,
@@ -73,7 +74,7 @@ import {
   type PaymentMethod,
 } from "./payment-options";
 import { SearchSelect } from "./search-select";
-import { DailyEntryBillPreview } from "@/app/(app)/daily-entries/components/daily-entry-bill-preview"
+import { DailyEntryBillPreview } from "@/app/(app)/daily-entries/components/daily-entry-bill-preview";
 
 /* -------------------------------------------------------------------------- */
 /* Types + helpers                                                            */
@@ -148,23 +149,22 @@ const PAYMENT_TYPE_LABEL: Record<PaymentType, string> = {
 const PAYMENT_STATUS: Record<PaymentStatus, { label: string; className: string }> = {
   PAID: {
     label: "Paid",
-    className:
-      "border-transparent bg-emerald-100 text-emerald-700 ",
+    className: "border-transparent bg-emerald-100 text-emerald-700 ",
   },
   PARTIAL: {
     label: "Partial",
-    className:
-      "border-transparent bg-amber-100 text-amber-700 ",
+    className: "border-transparent bg-amber-100 text-amber-700 ",
   },
   UNPAID: {
     label: "Unpaid",
-    className:
-      "border-transparent bg-red-100 text-red-700 ",
+    className: "border-transparent bg-red-100 text-red-700 ",
   },
 };
 
-const MONTHLY_BADGE =
-  "border-transparent bg-sky-100 text-sky-700 ";
+const MONTHLY_BADGE = "border-transparent bg-sky-100 text-sky-700 ";
+
+const QUICK_SALE_BADGE =
+  "border-emerald-200 bg-emerald-100 text-emerald-700";
 
 function derivePaymentStatus(
   paymentType: PaymentType,
@@ -229,9 +229,7 @@ function Figures({
         <p
           className={cn(
             "mt-1 text-sm font-semibold tabular-nums sm:text-base",
-            highlightOutstanding &&
-              outstanding > 0 &&
-              "text-red-600 ",
+            highlightOutstanding && outstanding > 0 && "text-red-600 ",
           )}
         >
           {formatCurrency(outstanding)}
@@ -304,6 +302,160 @@ function RadioCards<T extends string>({
 }
 
 /* -------------------------------------------------------------------------- */
+/* Quick Sale edit form                                                       */
+/* -------------------------------------------------------------------------- */
+
+interface QuickSaleEditFormProps {
+  amount: string;
+  amountPaise: number;
+  paymentMethod: PaymentMethod;
+  reference: string;
+  notes: string;
+  onAmountChange: (value: string) => void;
+  onPaymentMethodChange: (value: PaymentMethod) => void;
+  onReferenceChange: (value: string) => void;
+  onNotesChange: (value: string) => void;
+}
+
+/**
+ * A Quick Sale is always: Walk-in Customer, Quick Sale product, quantity 1,
+ * Immediate, Paid. So the only editable things are the amount, how it was
+ * paid, the payment reference and the notes.
+ */
+function QuickSaleEditForm({
+  amount,
+  amountPaise,
+  paymentMethod,
+  reference,
+  notes,
+  onAmountChange,
+  onPaymentMethodChange,
+  onReferenceChange,
+  onNotesChange,
+}: QuickSaleEditFormProps) {
+  const selectedMethod = PAYMENT_METHOD_OPTIONS.find(
+    (option) => option.value === paymentMethod,
+  );
+
+  const amountError =
+    amount !== "" && amountPaise <= 0
+      ? "Enter an amount greater than zero."
+      : null;
+
+  return (
+    <div className="space-y-6">
+      <div className="rounded-lg border border-emerald-100 bg-emerald-50/50 px-4 py-3">
+        <div className="flex items-center gap-2">
+          <Badge variant="outline" className={QUICK_SALE_BADGE}>
+            Quick Sale
+          </Badge>
+          <span className="text-sm text-muted-foreground">Walk-in sale</span>
+        </div>
+        <p className="mt-1 text-xs text-muted-foreground">
+          Quick Sales are always immediate and fully paid.
+        </p>
+      </div>
+
+      {/* Amount */}
+      <div className="flex flex-col gap-2">
+        <Label htmlFor="quick-sale-amount">Sale Amount</Label>
+        <div className="relative">
+          <span className="pointer-events-none absolute inset-y-0 left-3 flex items-center text-sm text-muted-foreground">
+            ₹
+          </span>
+          <Input
+            id="quick-sale-amount"
+            type="number"
+            inputMode="decimal"
+            min="0.01"
+            step="0.01"
+            className="pl-7 tabular-nums"
+            placeholder="0.00"
+            value={amount}
+            aria-invalid={amountError !== null}
+            onChange={(event) => onAmountChange(event.target.value)}
+          />
+        </div>
+        {amountError && (
+          <p className="text-xs text-destructive">{amountError}</p>
+        )}
+      </div>
+
+      {/* Payment method */}
+      <div className="flex flex-col gap-2">
+        <Label htmlFor="quick-sale-method">Payment Method</Label>
+        <Select
+          value={paymentMethod}
+          onValueChange={(value) => {
+            if (isPaymentMethod(value)) onPaymentMethodChange(value);
+          }}
+        >
+          <SelectTrigger id="quick-sale-method" className="w-full">
+            <SelectValue placeholder="Select payment method">
+              {methodLabel(paymentMethod)}
+            </SelectValue>
+          </SelectTrigger>
+          <SelectContent>
+            {PAYMENT_METHOD_OPTIONS.map((option) => (
+              <SelectItem key={option.value} value={option.value}>
+                {option.label}
+              </SelectItem>
+            ))}
+          </SelectContent>
+        </Select>
+      </div>
+
+      {/* Reference */}
+      <div className="flex flex-col gap-2">
+        <Label htmlFor="quick-sale-reference">
+          Payment Reference{" "}
+          <span className="font-normal text-muted-foreground">(optional)</span>
+        </Label>
+        <Input
+          id="quick-sale-reference"
+          value={reference}
+          maxLength={100}
+          onChange={(event) => onReferenceChange(event.target.value)}
+          placeholder={selectedMethod?.referenceHint ?? "Optional"}
+        />
+      </div>
+
+      {/* Notes */}
+      <div className="flex flex-col gap-2">
+        <Label htmlFor="quick-sale-notes">
+          Notes{" "}
+          <span className="font-normal text-muted-foreground">(optional)</span>
+        </Label>
+        <Textarea
+          id="quick-sale-notes"
+          value={notes}
+          onChange={(event) => onNotesChange(event.target.value)}
+          placeholder="Add any notes for this quick sale..."
+          rows={3}
+        />
+      </div>
+
+      {/* Summary */}
+      <div className="rounded-lg border bg-muted/30 p-4">
+        <div className="flex items-center justify-between">
+          <span className="text-sm text-muted-foreground">Sale Total</span>
+          <span className="text-lg font-semibold tabular-nums">
+            {formatCurrency(amountPaise)}
+          </span>
+        </div>
+
+        <div className="mt-2 flex items-center justify-between border-t pt-2">
+          <span className="text-sm text-muted-foreground">Payment Status</span>
+          <Badge variant="outline" className={PAYMENT_STATUS.PAID.className}>
+            Paid
+          </Badge>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+/* -------------------------------------------------------------------------- */
 /* Dialog                                                                     */
 /* -------------------------------------------------------------------------- */
 
@@ -323,12 +475,19 @@ export function ViewDailyEntryDialog({
   const [actionError, setActionError] = useState<string | null>(null);
   const [confirmDelete, setConfirmDelete] = useState(false);
 
-  // Edit mode
+  // Edit mode (Customer Sale)
   const [editCustomerId, setEditCustomerId] = useState<number | null>(null);
   const [editPaymentType, setEditPaymentType] =
     useState<PaymentType>("IMMEDIATE");
   const [editItems, setEditItems] = useState<EditItem[]>([]);
   const [editNotes, setEditNotes] = useState("");
+
+  // Edit mode (Quick Sale)
+  const [quickSaleAmount, setQuickSaleAmount] = useState("");
+  const [quickSalePaymentMethod, setQuickSalePaymentMethod] =
+    useState<PaymentMethod>("CASH");
+  const [quickSaleReference, setQuickSaleReference] = useState("");
+  const [quickSaleNotes, setQuickSaleNotes] = useState("");
 
   // Record payment mode
   const [payKind, setPayKind] = useState<PayKind>("FULL");
@@ -337,8 +496,7 @@ export function ViewDailyEntryDialog({
   const [payDate, setPayDate] = useState(todayKey);
   const [payReference, setPayReference] = useState("");
   const [payNotes, setPayNotes] = useState("");
-  const [billPreviewOpen, setBillPreviewOpen] =
-  useState(false);
+  const [billPreviewOpen, setBillPreviewOpen] = useState(false);
 
   /* ---- Always start in view mode for a new entry / re-open ---- */
   useEffect(() => {
@@ -365,8 +523,6 @@ export function ViewDailyEntryDialog({
 
         const data = (await response.json()) as DailyEntryDetail;
 
-        console.log({data})
-
         setEntry(data);
         setStatus("success");
       } catch (error) {
@@ -388,10 +544,12 @@ export function ViewDailyEntryDialog({
   const showError = status === "error" && !current;
   const showLoading = !current && !showError;
 
+  const isQuickSale = current?.isQuickSaleEntry === true;
   const isMonthly = current?.paymentType === "MONTHLY";
   const statusBadge = current ? PAYMENT_STATUS[current.paymentStatus] : null;
   const canRecordPayment =
     current !== null &&
+    !isQuickSale &&
     current.paymentType === "IMMEDIATE" &&
     current.paymentStatus !== "PAID" &&
     current.outstandingAmount > 0;
@@ -495,6 +653,16 @@ export function ViewDailyEntryDialog({
     ) &&
     !editTotalTooLow;
 
+  /* ---- Quick Sale edit: validation ---- */
+  const quickSaleAmountPaise = Math.round(
+    (Number(quickSaleAmount) || 0) * 100,
+  );
+
+  const quickSaleEditValid =
+    isQuickSale &&
+    quickSaleAmountPaise > 0 &&
+    isPaymentMethod(quickSalePaymentMethod);
+
   /* ---- Pay: calculations ---- */
   const outstanding = current?.outstandingAmount ?? 0;
   const payEnteredPaise = Math.round((Number(payAmount) || 0) * 100);
@@ -523,7 +691,7 @@ export function ViewDailyEntryDialog({
 
   /* ---- Mode switches ---- */
   function startEdit() {
-    if (!current) return;
+    if (!current || current.isQuickSaleEntry) return;
 
     setEditCustomerId(current.customerId);
     setEditPaymentType(current.paymentType);
@@ -535,6 +703,21 @@ export function ViewDailyEntryDialog({
         quantity: String(item.quantity),
       })),
     );
+    setActionError(null);
+    setMode("edit");
+  }
+
+  function startQuickSaleEdit() {
+    if (!current || !current.isQuickSaleEntry) return;
+
+    const payment = current.payments[0];
+    const method = payment?.paymentMethod;
+
+    setQuickSaleAmount((current.total / 100).toFixed(2));
+    setQuickSalePaymentMethod(method && isPaymentMethod(method) ? method : "CASH");
+    setQuickSaleReference(payment?.reference ?? "");
+    setQuickSaleNotes(current.notes ?? "");
+
     setActionError(null);
     setMode("edit");
   }
@@ -563,7 +746,7 @@ export function ViewDailyEntryDialog({
 
   /* ---- Actions ---- */
   async function handleSaveEdit() {
-    if (!current || !editValid) return;
+    if (!current || current.isQuickSaleEntry || !editValid) return;
 
     setIsBusy(true);
     setActionError(null);
@@ -587,6 +770,34 @@ export function ViewDailyEntryDialog({
     } catch (error) {
       setActionError(
         error instanceof Error ? error.message : "Failed to save changes.",
+      );
+    } finally {
+      setIsBusy(false);
+    }
+  }
+
+  async function handleSaveQuickSale() {
+    if (!current || !current.isQuickSaleEntry || !quickSaleEditValid) return;
+
+    setIsBusy(true);
+    setActionError(null);
+
+    try {
+      const result = await updateQuickSaleAction({
+        entryId: current.id,
+        amount: quickSaleAmountPaise,
+        paymentMethod: quickSalePaymentMethod,
+        reference: quickSaleReference.trim() || null,
+        notes: quickSaleNotes.trim() || null,
+      });
+
+      if (!result.success) throw new Error(result.error);
+
+      setMode("view");
+      setReloadKey((key) => key + 1);
+    } catch (error) {
+      setActionError(
+        error instanceof Error ? error.message : "Failed to save quick sale.",
       );
     } finally {
       setIsBusy(false);
@@ -646,10 +857,20 @@ export function ViewDailyEntryDialog({
 
   const title =
     mode === "edit"
-      ? "Edit Daily Entry"
+      ? isQuickSale
+        ? "Edit Quick Sale"
+        : "Edit Daily Entry"
       : mode === "pay"
         ? "Record Payment"
         : "View Daily Entry";
+
+  // Edit mode shows "Quick Sale" instead of the Walk-in Customer name
+  const descriptionName =
+    current && isQuickSale && mode === "edit"
+      ? "Quick Sale"
+      : current?.customerName;
+
+  const deleteNoun = isQuickSale ? "Quick Sale" : "Entry";
 
   return (
     <>
@@ -663,7 +884,7 @@ export function ViewDailyEntryDialog({
             </DialogTitle>
             <DialogDescription>
               {entryId !== null
-                ? `${current ? ` ${current.customerName} |` : ""} en-${entryId}`
+                ? `${descriptionName ? ` ${descriptionName} |` : ""} en-${entryId}`
                 : "Review the details of this entry."}
             </DialogDescription>
           </DialogHeader>
@@ -698,15 +919,26 @@ export function ViewDailyEntryDialog({
                       {current.customerName}
                     </p>
                     <div className="mt-1 flex flex-wrap items-center gap-2">
-                      <Badge variant="outline">
-                        {getCustomerTypeLabel(current.customerType)}
-                      </Badge>
+                      {isQuickSale && (
+                        <Badge variant="outline" className={QUICK_SALE_BADGE}>
+                          Quick Sale
+                        </Badge>
+                      )}
+
+                      {/* Quick Sales are always the walk-in customer */}
+                      {!isQuickSale && (
+                        <Badge variant="outline">
+                          {getCustomerTypeLabel(current.customerType)}
+                        </Badge>
+                      )}
+
                       <Badge
                         variant="outline"
                         className={isMonthly ? MONTHLY_BADGE : undefined}
                       >
                         {PAYMENT_TYPE_LABEL[current.paymentType]}
                       </Badge>
+
                       {!isMonthly && (
                         <Badge variant="outline" className={statusBadge.className}>
                           {statusBadge.label}
@@ -785,34 +1017,39 @@ export function ViewDailyEntryDialog({
                       </TableBody>
 
                       <TableFooter>
-                        <TableRow className="hover:bg-transparent">
-                          <TableCell colSpan={2} className="px-4 text-muted-foreground">
-                            Subtotal
-                          </TableCell>
-                          <TableCell className="px-4 text-right tabular-nums">
-                            {formatCurrency(current.subtotal)}
-                          </TableCell>
-                        </TableRow>
+                        {/* A Quick Sale is a single amount: no subtotal/tax breakdown */}
+                        {!isQuickSale && (
+                          <>
+                            <TableRow className="hover:bg-transparent">
+                              <TableCell colSpan={2} className="px-4 text-muted-foreground">
+                                Subtotal
+                              </TableCell>
+                              <TableCell className="px-4 text-right tabular-nums">
+                                {formatCurrency(current.subtotal)}
+                              </TableCell>
+                            </TableRow>
 
-                        {current.discount > 0 && (
-                          <TableRow className="hover:bg-transparent">
-                            <TableCell colSpan={2} className="px-4 text-muted-foreground">
-                              Discount
-                            </TableCell>
-                            <TableCell className="px-4 text-right tabular-nums">
-                              -{formatCurrency(current.discount)}
-                            </TableCell>
-                          </TableRow>
+                            {current.discount > 0 && (
+                              <TableRow className="hover:bg-transparent">
+                                <TableCell colSpan={2} className="px-4 text-muted-foreground">
+                                  Discount
+                                </TableCell>
+                                <TableCell className="px-4 text-right tabular-nums">
+                                  -{formatCurrency(current.discount)}
+                                </TableCell>
+                              </TableRow>
+                            )}
+
+                            <TableRow className="hover:bg-transparent">
+                              <TableCell colSpan={2} className="px-4 text-muted-foreground">
+                                Tax
+                              </TableCell>
+                              <TableCell className="px-4 text-right tabular-nums">
+                                {formatCurrency(current.tax)}
+                              </TableCell>
+                            </TableRow>
+                          </>
                         )}
-
-                        <TableRow className="hover:bg-transparent">
-                          <TableCell colSpan={2} className="px-4 text-muted-foreground">
-                            Tax
-                          </TableCell>
-                          <TableCell className="px-4 text-right tabular-nums">
-                            {formatCurrency(current.tax)}
-                          </TableCell>
-                        </TableRow>
 
                         <TableRow className="hover:bg-transparent">
                           <TableCell colSpan={2} className="px-4 font-semibold">
@@ -889,7 +1126,21 @@ export function ViewDailyEntryDialog({
             )}
 
             {/* ------------------------------ EDIT ------------------------------ */}
-            {current && mode === "edit" && (
+            {current && mode === "edit" && isQuickSale && (
+              <QuickSaleEditForm
+                amount={quickSaleAmount}
+                amountPaise={quickSaleAmountPaise}
+                paymentMethod={quickSalePaymentMethod}
+                reference={quickSaleReference}
+                notes={quickSaleNotes}
+                onAmountChange={setQuickSaleAmount}
+                onPaymentMethodChange={setQuickSalePaymentMethod}
+                onReferenceChange={setQuickSaleReference}
+                onNotesChange={setQuickSaleNotes}
+              />
+            )}
+
+            {current && mode === "edit" && !isQuickSale && (
               <div className="space-y-6">
                 {/* Customer */}
                 <div className="flex flex-col gap-2">
@@ -1301,23 +1552,27 @@ export function ViewDailyEntryDialog({
 
               {current && (
                 <div className="flex flex-col gap-2 sm:flex-row sm:items-center">
-                  {!entry?.isQuickSaleEntry && <Button
+                  {!isQuickSale && (
+                    <Button
+                      type="button"
+                      variant="outline"
+                      onClick={() => setBillPreviewOpen(true)}
+                    >
+                      <Printer />
+                      Print Bill
+                    </Button>
+                  )}
+
+                  <Button
                     type="button"
                     variant="outline"
-                    onClick={() => {
-                        setBillPreviewOpen(true);
-                    }}
+                    onClick={isQuickSale ? startQuickSaleEdit : startEdit}
                   >
-                    <Printer />
-                    Print Bill
-                  </Button>}
-
-                  <Button type="button" variant="outline" onClick={startEdit}>
                     <Pencil />
-                    Edit
+                    {isQuickSale ? "Edit Quick Sale" : "Edit"}
                   </Button>
 
-                  {/* Never shown for Monthly entries */}
+                  {/* Never shown for Monthly entries or Quick Sales */}
                   {canRecordPayment && (
                     <Button type="button" onClick={startPay}>
                       <Wallet />
@@ -1339,7 +1594,7 @@ export function ViewDailyEntryDialog({
                 onClick={() => setConfirmDelete(true)}
               >
                 <Trash2 />
-                Delete Entry
+                Delete {deleteNoun}
               </Button>
 
               <div className="flex flex-col-reverse gap-2 sm:flex-row sm:items-center">
@@ -1353,11 +1608,15 @@ export function ViewDailyEntryDialog({
                 </Button>
                 <Button
                   type="button"
-                  disabled={!editValid || isBusy}
-                  onClick={handleSaveEdit}
+                  disabled={
+                    isQuickSale
+                      ? !quickSaleEditValid || isBusy
+                      : !editValid || isBusy
+                  }
+                  onClick={isQuickSale ? handleSaveQuickSale : handleSaveEdit}
                 >
                   {isBusy && <Loader2 className="animate-spin" />}
-                  Save Changes
+                  {isQuickSale ? "Save Quick Sale" : "Save Changes"}
                 </Button>
               </div>
             </div>
@@ -1392,30 +1651,37 @@ export function ViewDailyEntryDialog({
       <AlertDialog open={confirmDelete} onOpenChange={setConfirmDelete}>
         <AlertDialogContent>
           <AlertDialogHeader>
-            <AlertDialogTitle>Delete this entry?</AlertDialogTitle>
+            <AlertDialogTitle>
+              {isQuickSale ? "Delete this quick sale?" : "Delete this entry?"}
+            </AlertDialogTitle>
             <AlertDialogDescription>
               {current
-                ? `This permanently deletes the entry for ${current.customerName}, including its ${current.items.length} ${current.items.length === 1 ? "product" : "products"}${
-                    current.payments.length > 0
-                      ? ` and ${current.payments.length} recorded ${current.payments.length === 1 ? "payment" : "payments"} totalling ${formatCurrency(current.paidAmount)}`
-                      : ""
-                  }. This can't be undone.`
+                ? isQuickSale
+                  ? `This permanently deletes this ${formatCurrency(current.total)} quick sale and its recorded payment. This can't be undone.`
+                  : `This permanently deletes the entry for ${current.customerName}, including its ${current.items.length} ${current.items.length === 1 ? "product" : "products"}${
+                      current.payments.length > 0
+                        ? ` and ${current.payments.length} recorded ${current.payments.length === 1 ? "payment" : "payments"} totalling ${formatCurrency(current.paidAmount)}`
+                        : ""
+                    }. This can't be undone.`
                 : "This can't be undone."}
             </AlertDialogDescription>
           </AlertDialogHeader>
           <AlertDialogFooter>
-            <AlertDialogCancel>Keep entry</AlertDialogCancel>
+            <AlertDialogCancel>
+              {isQuickSale ? "Keep quick sale" : "Keep entry"}
+            </AlertDialogCancel>
             <AlertDialogAction variant="destructive" onClick={handleDelete}>
-              Delete entry
+              {isQuickSale ? "Delete quick sale" : "Delete entry"}
             </AlertDialogAction>
           </AlertDialogFooter>
         </AlertDialogContent>
       </AlertDialog>
+
       <DailyEntryBillPreview
-  entryId={current?.id ?? null}
-  open={billPreviewOpen}
-  onOpenChange={setBillPreviewOpen}
-/>
+        entryId={current?.id ?? null}
+        open={billPreviewOpen}
+        onOpenChange={setBillPreviewOpen}
+      />
     </>
   );
 }

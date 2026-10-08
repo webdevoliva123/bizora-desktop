@@ -11,6 +11,7 @@ export const DAILY_ENTRY_TYPES = {
 export interface DailyEntryListItem {
     id: number;
     entryDate: string;
+    isQuickSaleEntry : boolean,
     createdAt: string;
 
     customerName: string;

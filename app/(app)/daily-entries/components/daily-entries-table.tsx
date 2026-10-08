@@ -41,28 +41,38 @@ import { ViewDailyEntryDialog } from "./view-daily-entry-dialog";
 /* Filter types + storage                                                     */
 /* -------------------------------------------------------------------------- */
 
-type CustomerTypeFilter = "ALL" | "BUSINESS" | "PERSON";
+type EntryFilter = "ALL" | "BUSINESS" | "PERSON" | "QUICK_SALE";
 
 interface StoredFilters {
-    /** "yyyy-MM-dd", or null meaning "follow today" */
     date: string | null;
-    customerType: CustomerTypeFilter;
+    entryFilter: EntryFilter;
 }
 
 const FILTER_KEY = "bizora:daily-entries";
 
-const CUSTOMER_TYPE_OPTIONS: { value: CustomerTypeFilter; label: string }[] = [
-    { value: "ALL", label: "All customers" },
-    { value: "BUSINESS", label: "Business" },
-    { value: "PERSON", label: "Person" },
-];
+const ENTRY_FILTER_OPTIONS: {
+    value: EntryFilter;
+    label: string;
+}[] = [
+        { value: "ALL", label: "All entries" },
+        { value: "BUSINESS", label: "Business" },
+        { value: "PERSON", label: "Person" },
+        { value: "QUICK_SALE", label: "Quick Sale" },
+    ];
 
-const customerTypeLabel = (value: CustomerTypeFilter) =>
-    CUSTOMER_TYPE_OPTIONS.find((option) => option.value === value)?.label ??
-    value;
 
-const isCustomerTypeFilter = (value: unknown): value is CustomerTypeFilter =>
-    CUSTOMER_TYPE_OPTIONS.some((option) => option.value === value);
+const entryFilterLabel = (value: EntryFilter) =>
+    ENTRY_FILTER_OPTIONS.find(
+        (option) => option.value === value,
+    )?.label ?? value;
+
+const isEntryFilter = (
+    value: unknown,
+): value is EntryFilter =>
+    ENTRY_FILTER_OPTIONS.some(
+        (option) => option.value === value,
+    );
+
 
 const DATE_KEY_PATTERN = /^\d{4}-\d{2}-\d{2}$/;
 
@@ -79,8 +89,8 @@ function readFilters(): StoredFilters | null {
                 typeof parsed.date === "string" && DATE_KEY_PATTERN.test(parsed.date)
                     ? parsed.date
                     : null,
-            customerType: isCustomerTypeFilter(parsed.customerType)
-                ? parsed.customerType
+            entryFilter: isEntryFilter(parsed.entryFilter)
+                ? parsed.entryFilter
                 : "ALL",
         };
     } catch {
@@ -90,7 +100,9 @@ function readFilters(): StoredFilters | null {
 
 function writeFilters(filters: StoredFilters) {
     try {
-        const isDefault = filters.date === null && filters.customerType === "ALL";
+        const isDefault =
+            filters.date === null &&
+            filters.entryFilter === "ALL";
 
         if (isDefault) {
             localStorage.removeItem(FILTER_KEY);
@@ -209,7 +221,8 @@ export function DailyEntriesTable({
     // Client-only values are set after mount to avoid SSR/timezone mismatches
     const [today, setToday] = useState("");
     const [dateFilter, setDateFilter] = useState<string | null>(null); // null = today
-    const [customerType, setCustomerType] = useState<CustomerTypeFilter>("ALL");
+    const [entryFilter, setEntryFilter] =
+        useState<EntryFilter>("ALL");
     const [hydrated, setHydrated] = useState(false);
     const [calendarOpen, setCalendarOpen] = useState(false);
     const [viewEntryId, setViewEntryId] = useState<number | null>(null);
@@ -222,7 +235,7 @@ export function DailyEntriesTable({
         const stored = readFilters();
         if (stored) {
             setDateFilter(stored.date);
-            setCustomerType(stored.customerType);
+            setEntryFilter(stored.entryFilter);
         }
 
         setHydrated(true);
@@ -231,8 +244,11 @@ export function DailyEntriesTable({
     /* ---- Persist filters on change (after hydration) ---- */
     useEffect(() => {
         if (!hydrated) return;
-        writeFilters({ date: dateFilter, customerType });
-    }, [hydrated, dateFilter, customerType]);
+        writeFilters({
+            date: dateFilter,
+            entryFilter,
+        });
+    }, [hydrated, dateFilter, entryFilter]);
 
     const selectedKey = dateFilter ?? today;
     const isToday = dateFilter === null;
@@ -265,17 +281,23 @@ export function DailyEntriesTable({
                     return false;
                 }
 
-                if (customerType === "BUSINESS") {
+                if (entryFilter === "BUSINESS") {
                     return entry.customerType === "BUSINESS";
                 }
 
-                if (customerType === "PERSON") {
+                if (entryFilter === "PERSON") {
                     return entry.customerType === "PERSON";
                 }
 
+                if (entryFilter === "QUICK_SALE") {
+                    return entry.isQuickSaleEntry;
+                }
+
+                return true;
+
                 return true;
             }),
-        [entries, selectedKey, customerType],
+        [entries, selectedKey, entryFilter],
     );
 
     const totalAmount = useMemo(
@@ -366,19 +388,28 @@ export function DailyEntriesTable({
                 {/* Right: customer type */}
                 <div className="sm:ml-auto">
                     <Select
-                        value={customerType}
+                        value={entryFilter}
                         onValueChange={(value) => {
-                            if (isCustomerTypeFilter(value)) setCustomerType(value);
+                            if (isEntryFilter(value)) {
+                                setEntryFilter(value);
+                            }
                         }}
                     >
-                        <SelectTrigger className="w-full sm:w-44" aria-label="Customer type">
-                            <SelectValue placeholder="Customer type">
-                                {customerTypeLabel(customerType)}
+                        <SelectTrigger
+                            className="w-full sm:w-44"
+                            aria-label="Entry filter"
+                        >
+                            <SelectValue placeholder="All entries">
+                                {entryFilterLabel(entryFilter)}
                             </SelectValue>
                         </SelectTrigger>
+
                         <SelectContent align="end">
-                            {CUSTOMER_TYPE_OPTIONS.map((option) => (
-                                <SelectItem key={option.value} value={option.value}>
+                            {ENTRY_FILTER_OPTIONS.map((option) => (
+                                <SelectItem
+                                    key={option.value}
+                                    value={option.value}
+                                >
                                     {option.label}
                                 </SelectItem>
                             ))}
@@ -412,8 +443,8 @@ export function DailyEntriesTable({
                                         No entries for {isToday ? "today" : formatDate(selectedDate)}
                                     </p>
                                     <p className="mt-1 text-sm text-muted-foreground">
-                                        {customerType !== "ALL"
-                                            ? "Try another customer type or date."
+                                        {entryFilter !== "ALL"
+                                            ? "Try another entry type or date."
                                             : "Use Add Entry to record one, or pick another date."}
                                     </p>
                                 </TableCell>
@@ -427,7 +458,12 @@ export function DailyEntriesTable({
                                     <TableRow
                                         key={entry.id}
                                         tabIndex={0}
-                                        className="cursor-pointer"
+                                        className={cn(
+                                            "cursor-pointer transition-colors",
+                                            entry.isQuickSaleEntry
+                                                ? "bg-gradient-to-r from-emerald-50/80 via-green-50/40 to-transparent hover:from-emerald-100/80 hover:via-green-50/60"
+                                                : "hover:bg-muted/50",
+                                        )}
                                         onClick={() => openEntry(entry.id)}
                                         onKeyDown={(event) => {
                                             if (event.key === "Enter" || event.key === " ") {
@@ -446,9 +482,22 @@ export function DailyEntriesTable({
 
                                         <TableCell className="px-4">
                                             <div className="flex flex-col">
-                                                <span className="font-medium">
-                                                    {entry.customerName}
-                                                </span>
+
+
+                                                <div className="flex items-center gap-2">
+                                                    <span className="font-medium">
+                                                        {entry.customerName}
+                                                    </span>
+
+                                                    {entry.isQuickSaleEntry && (
+                                                        <Badge
+                                                            variant="outline"
+                                                            className="border-emerald-200 bg-emerald-100 text-emerald-700"
+                                                        >
+                                                            Quick Sale
+                                                        </Badge>
+                                                    )}
+                                                </div>
                                                 <span className="text-xs text-muted-foreground">
                                                     {entry.customerType === "BUSINESS"
                                                         ? "Business"
