@@ -1,0 +1,1 @@
+ALTER TABLE `stock_purchases` ADD `paid_amount` integer DEFAULT 0 NOT NULL;

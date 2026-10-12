@@ -57,7 +57,7 @@ import {
 } from "@/components/ui/select";
 import { Textarea } from "@/components/ui/textarea";
 import { createDailyEntryAction } from "../actions";
-import { PAYMENT_METHOD, PAYMENT_STATUS, PAYMENT_TYPE } from "@/common";
+import { PAYMENT_METHOD, PAYMENT_OPTIONS, PAYMENT_STATUS, PAYMENT_TYPE, PAYMENT_TYPE_OPTIONS } from "@/common";
 
 /* -------------------------------------------------------------------------- */
 /* Types + constants                                                          */
@@ -102,33 +102,10 @@ const DEFAULT_PAYMENT_TYPE: PaymentType = "IMMEDIATE";
 const DEFAULT_PAYMENT_STATUS: PaymentStatus = "UNPAID";
 const DEFAULT_PAYMENT_METHOD: PaymentMethod = "CASH";
 
-const PAYMENT_TYPE_OPTIONS: {
-  value: PaymentType;
-  label: string;
-  description: string;
-}[] = [
-  {
-    value: "IMMEDIATE",
-    label: "Immediate",
-    description: "Customer pays now, fully or partly.",
-  },
-  {
-    value: "MONTHLY",
-    label: "Monthly",
-    description: "Added to the customer's monthly account.",
-  },
-];
-
-const PAYMENT_OPTIONS: { value: PaymentStatus; label: string }[] = [
-  { value: "UNPAID", label: "Unpaid" },
-  { value: "PARTIAL", label: "Partial" },
-  { value: "PAID", label: "Paid" },
-];
-
 const PAYMENT_METHOD_OPTIONS: {
-  value: PaymentMethod;
+  value: PAYMENT_METHOD;
   label: string;
-  referenceHint: string;
+  referenceHint?: string;
 }[] = [
   { value: "CASH", label: "Cash", referenceHint: "Optional" },
   { value: "UPI", label: "UPI", referenceHint: "(Optional)" },
@@ -144,6 +121,7 @@ const PAYMENT_METHOD_OPTIONS: {
   },
   { value: "OTHER", label: "Other", referenceHint: "Optional" },
 ];
+
 
 const paymentTypeLabel = (type: PaymentType) =>
   PAYMENT_TYPE_OPTIONS.find((option) => option.value === type)?.label ?? type;

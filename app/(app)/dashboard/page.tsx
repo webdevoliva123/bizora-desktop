@@ -22,6 +22,7 @@ import { PageHeader } from "@/components/shared/page-header";
 import { getBusinessBasicDetails, getSetupStatus } from "@/lib/db/business";
 import { getDashboardSummary, getRecentTransactions, getSalesOverview } from "@/lib/db/dashboard";
 import { SalesOverviewChart } from "./components/sales-overview-chart";
+import StatCard from "@/components/global-common/stat-card";
 
 function formatCurrency(amount: number, currency: string) {
     return new Intl.NumberFormat(undefined, {
@@ -67,100 +68,39 @@ export default async function DashboardPage() {
                 description="Overview of your business activity."
             />
 
+
+
+
             <section className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
-                {/* Today's Sales */}
-                <Card>
-                    <CardHeader className="flex flex-row items-center justify-between space-y-0">
-                        <CardTitle className="text-sm font-medium">
-                            Today's Sales
-                        </CardTitle>
+                <StatCard
+                    title="Today's Sales"
+                    value={formatCurrency(summary.todaySales, currency)}
+                    note="Today's recorded sales"
+                    icon={IndianRupee}
+                />
 
-                        <IndianRupee className="size-4 text-muted-foreground" />
-                    </CardHeader>
+                <StatCard
+                    title="Today's Payments"
+                    value={formatCurrency(summary.todayPayments, currency)}
+                    note="Payments received today"
+                    icon={Wallet}
+                />
 
-                    <CardContent>
-                        <div className="text-2xl font-semibold">
-                            {formatCurrency(
-                                summary.todaySales,
-                                currency,
-                            )}
-                        </div>
+                <StatCard
+                    title="Outstanding"
+                    value={formatCurrency(summary.outstanding, currency)}
+                    note="Amount yet to be collected"
+                    icon={IndianRupee}
+                />
 
-                        <p className="mt-1 text-xs text-muted-foreground">
-                            Today's recorded sales
-                        </p>
-                    </CardContent>
-                </Card>
-
-                {/* Today's Payments */}
-                <Card>
-                    <CardHeader className="flex flex-row items-center justify-between space-y-0">
-                        <CardTitle className="text-sm font-medium">
-                            Today's Payments
-                        </CardTitle>
-
-                        <Wallet className="size-4 text-muted-foreground" />
-                    </CardHeader>
-
-                    <CardContent>
-                        <div className="text-2xl font-semibold">
-                            {formatCurrency(
-                                summary.todayPayments,
-                                currency,
-                            )}
-                        </div>
-
-                        <p className="mt-1 text-xs text-muted-foreground">
-                            Payments received today
-                        </p>
-                    </CardContent>
-                </Card>
-
-                {/* Outstanding */}
-                <Card>
-                    <CardHeader className="flex flex-row items-center justify-between space-y-0">
-                        <CardTitle className="text-sm font-medium">
-                            Outstanding
-                        </CardTitle>
-
-                        <IndianRupee className="size-4 text-muted-foreground" />
-                    </CardHeader>
-
-                    <CardContent>
-                        <div className="text-2xl font-semibold">
-                            {formatCurrency(
-                                summary.outstanding,
-                                currency,
-                            )}
-                        </div>
-
-                        <p className="mt-1 text-xs text-muted-foreground">
-                            Amount yet to be collected
-                        </p>
-                    </CardContent>
-                </Card>
-
-                {/* Low Stock */}
-                <Card>
-                    <CardHeader className="flex flex-row items-center justify-between space-y-0">
-                        <CardTitle className="text-sm font-medium">
-                            Low Stock
-                        </CardTitle>
-
-                        <AlertTriangle className="size-4 text-muted-foreground" />
-                    </CardHeader>
-
-                    <CardContent>
-                        <div className="text-2xl font-semibold">
-                            {summary.lowStock}
-                        </div>
-
-                        <p className="mt-1 text-xs text-muted-foreground">
-                            Products below stock threshold
-                        </p>
-                    </CardContent>
-                </Card>
+                <StatCard
+                    title="Low Stock"
+                    value={summary.lowStock}
+                    note="Products below stock threshold"
+                    icon={AlertTriangle}
+                />
             </section>
+
 
             <section className="mt-6 grid gap-4 lg:grid-cols-2">
                 <Card>
@@ -216,10 +156,10 @@ export default async function DashboardPage() {
                                         <div className="shrink-0 text-right">
                                             <p
                                                 className={`text-sm font-medium ${transaction.category === "SALE"
-                                                        ? "text-orange-600"
-                                                        : transaction.type === "CREDIT"
-                                                            ? "text-green-600"
-                                                            : "text-red-600"
+                                                    ? "text-orange-600"
+                                                    : transaction.type === "CREDIT"
+                                                        ? "text-green-600"
+                                                        : "text-red-600"
                                                     }`}
                                             >
                                                 {transaction.type === "CREDIT" ? "+" : "-"}

@@ -1,0 +1,1284 @@
+"use client";
+
+import { useEffect, useMemo, useRef, useState } from "react";
+import { createPortal } from "react-dom";
+import {
+    Building2,
+    Download,
+    FileText,
+    Loader2,
+    MapPin,
+    Phone,
+    Printer,
+    RefreshCw,
+    Truck,
+} from "lucide-react";
+import { useReactToPrint } from "react-to-print";
+
+import { Button } from "@/components/ui/button";
+import {
+    Dialog,
+    DialogContent,
+    DialogDescription,
+    DialogHeader,
+    DialogTitle,
+} from "@/components/ui/dialog";
+import {
+    Select,
+    SelectContent,
+    SelectItem,
+    SelectTrigger,
+    SelectValue,
+} from "@/components/ui/select";
+import { Skeleton } from "@/components/ui/skeleton";
+import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { getFileUrl } from "@/lib/files/urls";
+import type { SupplierOption } from "@/lib/types/stock-purchase";
+
+/* -------------------------------------------------------------------------- */
+/* Types                                                                      */
+/* -------------------------------------------------------------------------- */
+
+type PrintMode = "summary" | "full" | "none";
+type LoadStatus = "idle" | "loading" | "success" | "error";
+type PurchaseStatus = "UNPAID" | "PARTIAL" | "PAID";
+
+type StatementItem = {
+    id: number;
+    productName: string;
+    unit: string;
+    quantity: number;
+    unitPrice: number;
+    taxRate: number | null;
+    total: number;
+};
+
+type StatementPayment = {
+    id: number;
+    amount: number;
+    paymentMethod: string;
+    paymentDate: string;
+    reference: string | null;
+    notes: string | null;
+};
+
+type StatementPurchase = {
+    id: number;
+    purchaseNumber: string | null;
+    purchaseDate: string;
+    supplierName: string | null;
+    supplierPhone: string | null;
+    supplierEmail: string | null;
+    supplierAddress: string | null;
+    supplierCity: string | null;
+    supplierState: string | null;
+    supplierPostalCode: string | null;
+    subtotal: number;
+    tax: number;
+    total: number;
+    paymentStatus: string;
+    notes: string | null;
+    items: StatementItem[];
+    payments: StatementPayment[];
+    paidAmount: number;
+    outstandingAmount: number;
+    itemCount: number;
+};
+
+type StatementData = {
+    month: string;
+    business: {
+        name: string;
+        logoPath: string | null;
+        businessCategory?: string | null;
+        country: string;
+        currency: string;
+        address: string | null;
+        city: string | null;
+        state: string | null;
+        postalCode: string | null;
+        phone: string | null;
+        email: string | null;
+    };
+    purchases: StatementPurchase[];
+    taxRegistrations: {
+        country: string;
+        taxSystem: string;
+        registrationNumber: string | null;
+        isRegistered: boolean;
+    }[];
+    businessRegistrations: {
+        country: string;
+        authorityName: string;
+        registrationType: string;
+        registrationNumber: string | null;
+    }[];
+    totals: {
+        purchaseCount: number;
+        itemCount: number;
+        totalAmount: number;
+        paidAmount: number;
+        outstandingAmount: number;
+    };
+};
+
+type Loaded = { key: string; data: StatementData };
+
+type Props = {
+    open: boolean;
+    onOpenChange: (open: boolean) => void;
+    month: string; // yyyy-MM
+    suppliers: SupplierOption[];
+    currency: string;
+};
+
+/* -------------------------------------------------------------------------- */
+/* Constants                                                                  */
+/* -------------------------------------------------------------------------- */
+
+const BILL_WIDTH = 704;
+const PAGE_MARGIN_MM = 12;
+
+const PRINT_PAGE_STYLE = `
+  @page { size: A4; margin: ${PAGE_MARGIN_MM}mm; }
+  html, body { background: #fff; margin: 0; }
+  * { -webkit-print-color-adjust: exact; print-color-adjust: exact; }
+  .bill-export { width: 100% !important; }
+  thead { display: table-header-group; }
+  tr { break-inside: avoid; }
+`;
+
+const PRINT_MODES: { value: PrintMode; label: string; hint: string }[] = [
+    {
+        value: "summary",
+        label: "Summary",
+        hint: "One row per purchase. Products are not listed.",
+    },
+    {
+        value: "full",
+        label: "Full entries",
+        hint: "Every purchase with all its products, in a compact layout.",
+    },
+    {
+        value: "none",
+        label: "No entries",
+        hint: "Business details, totals and payments only.",
+    },
+];
+
+const isPrintMode = (value: string): value is PrintMode =>
+    PRINT_MODES.some((mode) => mode.value === value);
+
+const STATUS_LABEL: Record<PurchaseStatus, string> = {
+    PAID: "Paid",
+    PARTIAL: "Partially Paid",
+    UNPAID: "Unpaid",
+};
+
+const STATUS_CLASS: Record<PurchaseStatus, string> = {
+    PAID: "bg-emerald-50 text-emerald-700",
+    PARTIAL: "bg-amber-50 text-amber-700",
+    UNPAID: "bg-red-50 text-red-700",
+};
+
+const STATUS_TEXT: Record<PurchaseStatus, string> = {
+    PAID: "text-emerald-700",
+    PARTIAL: "text-amber-700",
+    UNPAID: "text-red-600",
+};
+
+/* -------------------------------------------------------------------------- */
+/* Helpers                                                                    */
+/* -------------------------------------------------------------------------- */
+
+function formatMoney(amount: number, currency: string) {
+    return new Intl.NumberFormat("en-IN", {
+        style: "currency",
+        currency: currency || "INR",
+        minimumFractionDigits: 2,
+        maximumFractionDigits: 2,
+    }).format(amount / 100);
+}
+
+function formatDate(value: string) {
+    if (!value) return "-";
+
+    const date = new Date(value.includes("T") ? value : `${value}T00:00:00`);
+
+    if (Number.isNaN(date.getTime())) return "-";
+
+    return new Intl.DateTimeFormat("en-IN", {
+        day: "2-digit",
+        month: "short",
+        year: "numeric",
+    }).format(date);
+}
+
+function formatMonth(value: string) {
+    if (!/^\d{4}-\d{2}$/.test(value)) return value;
+
+    const [year, month] = value.split("-").map(Number);
+
+    return new Intl.DateTimeFormat("en-IN", {
+        month: "long",
+        year: "numeric",
+    }).format(new Date(year, month - 1, 1));
+}
+
+function formatQuantity(value: number) {
+    return new Intl.NumberFormat("en-IN", { maximumFractionDigits: 3 }).format(
+        value,
+    );
+}
+
+function slugify(value: string) {
+    return (
+        value
+            .toLowerCase()
+            .replace(/[^a-z0-9]+/g, "-")
+            .replace(/^-+|-+$/g, "") || "all-suppliers"
+    );
+}
+
+const asStatus = (value: string): PurchaseStatus =>
+    value === "PAID" || value === "PARTIAL" ? value : "UNPAID";
+
+const purchaseRef = (purchase: { purchaseNumber: string | null; id: number }) =>
+    purchase.purchaseNumber || `PUR-${String(purchase.id).padStart(5, "0")}`;
+
+/* -------------------------------------------------------------------------- */
+/* PDF page-break helpers                                                     */
+/* -------------------------------------------------------------------------- */
+
+interface BreakBlock {
+    top: number;
+    bottom: number;
+}
+
+/** Measures every `.break-inside-avoid` element in canvas pixels. */
+function collectBlocks(node: HTMLElement, ratio: number): BreakBlock[] {
+    const origin = node.getBoundingClientRect().top;
+
+    return Array.from(
+        node.querySelectorAll<HTMLElement>(".break-inside-avoid"),
+    ).map((element) => {
+        const rect = element.getBoundingClientRect();
+
+        return {
+            top: (rect.top - origin) * ratio,
+            bottom: (rect.bottom - origin) * ratio,
+        };
+    });
+}
+
+/** Ends the PDF page before a block that would otherwise be cut in half. */
+function findSliceEnd(
+    offset: number,
+    maxEnd: number,
+    blocks: BreakBlock[],
+    pageHeightPx: number,
+): number {
+    const straddling = blocks.filter(
+        (block) =>
+            block.top > offset + 1 &&
+            block.top < maxEnd &&
+            block.bottom > maxEnd &&
+            block.bottom - block.top <= pageHeightPx,
+    );
+
+    if (straddling.length === 0) return maxEnd;
+
+    const end = Math.floor(Math.min(...straddling.map((block) => block.top)));
+
+    return end - offset < pageHeightPx * 0.25 ? maxEnd : end;
+}
+
+/* -------------------------------------------------------------------------- */
+/* Purchases: summary (one row per purchase)                                  */
+/* -------------------------------------------------------------------------- */
+
+function PurchasesSummaryTable({
+    purchases,
+    money,
+    showSupplier,
+}: {
+    purchases: StatementPurchase[];
+    money: (amount: number) => string;
+    showSupplier: boolean;
+}) {
+    const columns = showSupplier ? 9 : 8;
+
+    return (
+        <div className="overflow-hidden rounded-lg border border-slate-200">
+            <table className="w-full text-xs">
+                <thead className="bg-slate-50">
+                    <tr className="border-b border-slate-200 text-slate-600">
+                        <th className="w-10 px-3 py-2 text-left font-medium">#</th>
+                        <th className="px-3 py-2 text-left font-medium">Date</th>
+                        <th className="px-3 py-2 text-left font-medium">Purchase</th>
+                        {showSupplier && (
+                            <th className="px-3 py-2 text-left font-medium">Supplier</th>
+                        )}
+                        <th className="px-3 py-2 text-right font-medium">Products</th>
+                        <th className="px-3 py-2 text-right font-medium">Total</th>
+                        <th className="px-3 py-2 text-right font-medium">Paid</th>
+                        <th className="px-3 py-2 text-right font-medium">Balance</th>
+                        <th className="px-3 py-2 text-left font-medium">Status</th>
+                    </tr>
+                </thead>
+
+                <tbody>
+                    {purchases.map((purchase, index) => {
+                        const status = asStatus(purchase.paymentStatus);
+
+                        return (
+                            <tr
+                                key={purchase.id}
+                                className="break-inside-avoid border-b border-slate-100 last:border-b-0"
+                            >
+                                <td className="px-3 py-1.5 text-slate-500 tabular-nums">
+                                    {index + 1}
+                                </td>
+                                <td className="px-3 py-1.5 font-medium whitespace-nowrap">
+                                    {formatDate(purchase.purchaseDate)}
+                                </td>
+                                <td className="px-3 py-1.5 text-slate-500">
+                                    {purchaseRef(purchase)}
+                                </td>
+                                {showSupplier && (
+                                    <td className="px-3 py-1.5">
+                                        {purchase.supplierName || "No supplier"}
+                                    </td>
+                                )}
+                                <td className="px-3 py-1.5 text-right tabular-nums">
+                                    {purchase.itemCount}
+                                </td>
+                                <td className="px-3 py-1.5 text-right font-medium tabular-nums">
+                                    {money(purchase.total)}
+                                </td>
+                                <td className="px-3 py-1.5 text-right tabular-nums">
+                                    {money(purchase.paidAmount)}
+                                </td>
+                                <td
+                                    className={`px-3 py-1.5 text-right tabular-nums ${
+                                        purchase.outstandingAmount > 0
+                                            ? "font-medium text-red-600"
+                                            : ""
+                                    }`}
+                                >
+                                    {money(purchase.outstandingAmount)}
+                                </td>
+                                <td
+                                    className={`px-3 py-1.5 whitespace-nowrap ${STATUS_TEXT[status]}`}
+                                >
+                                    {STATUS_LABEL[status]}
+                                </td>
+                            </tr>
+                        );
+                    })}
+
+                    {purchases.length === 0 && (
+                        <tr>
+                            <td
+                                colSpan={columns}
+                                className="px-3 py-6 text-center text-slate-500"
+                            >
+                                No stock purchases for this period.
+                            </td>
+                        </tr>
+                    )}
+                </tbody>
+            </table>
+        </div>
+    );
+}
+
+/* -------------------------------------------------------------------------- */
+/* Purchases: full (one compact table, purchase band + product rows)          */
+/* -------------------------------------------------------------------------- */
+
+function PurchasesFullTable({
+    purchases,
+    money,
+    showSupplier,
+}: {
+    purchases: StatementPurchase[];
+    money: (amount: number) => string;
+    showSupplier: boolean;
+}) {
+    return (
+        <div className="overflow-hidden rounded-lg border border-slate-200">
+            <table className="w-full text-[11px] leading-tight">
+                <thead className="bg-slate-50">
+                    <tr className="border-b border-slate-200 text-slate-600">
+                        <th className="px-3 py-1.5 text-left font-medium">Product</th>
+                        <th className="px-3 py-1.5 text-right font-medium">Qty</th>
+                        <th className="px-3 py-1.5 text-right font-medium">Rate</th>
+                        <th className="px-3 py-1.5 text-right font-medium">Tax</th>
+                        <th className="px-3 py-1.5 text-right font-medium">Amount</th>
+                    </tr>
+                </thead>
+
+                {purchases.map((purchase, index) => {
+                    const status = asStatus(purchase.paymentStatus);
+
+                    const extras = [
+                        showSupplier && purchase.supplierName
+                            ? purchase.supplierName
+                            : null,
+                        purchase.tax > 0 ? `Tax ${money(purchase.tax)}` : null,
+                        `Paid ${money(purchase.paidAmount)}`,
+                        purchase.outstandingAmount > 0
+                            ? `Balance ${money(purchase.outstandingAmount)}`
+                            : null,
+                    ].filter(Boolean);
+
+                    return (
+                        <tbody
+                            key={purchase.id}
+                            className="break-inside-avoid border-t border-slate-200 first:border-t-0"
+                        >
+                            {/* Purchase band */}
+                            <tr className="bg-slate-100/80">
+                                <td colSpan={4} className="px-3 py-1 font-semibold">
+                                    {index + 1}. {formatDate(purchase.purchaseDate)}
+                                    <span className="ml-2 font-normal text-slate-500">
+                                        {purchaseRef(purchase)} · {extras.join(" · ")} ·{" "}
+                                        <span className={STATUS_TEXT[status]}>
+                                            {STATUS_LABEL[status]}
+                                        </span>
+                                    </span>
+                                </td>
+
+                                <td className="px-3 py-1 text-right font-semibold tabular-nums">
+                                    {money(purchase.total)}
+                                </td>
+                            </tr>
+
+                            {/* Products */}
+                            {purchase.items.map((item) => (
+                                <tr key={item.id} className="break-inside-avoid">
+                                    <td className="py-0.5 pr-3 pl-6">{item.productName}</td>
+
+                                    <td className="px-3 py-0.5 text-right whitespace-nowrap tabular-nums">
+                                        {formatQuantity(item.quantity)} {item.unit}
+                                    </td>
+
+                                    <td className="px-3 py-0.5 text-right tabular-nums">
+                                        {money(item.unitPrice)}
+                                    </td>
+
+                                    <td className="px-3 py-0.5 text-right text-slate-500 tabular-nums">
+                                        {(item.taxRate ?? 0) > 0 ? `${item.taxRate}%` : "—"}
+                                    </td>
+
+                                    <td className="px-3 py-0.5 text-right tabular-nums">
+                                        {money(item.total)}
+                                    </td>
+                                </tr>
+                            ))}
+
+                            {purchase.items.length === 0 && (
+                                <tr>
+                                    <td colSpan={5} className="py-0.5 pl-6 text-slate-500">
+                                        No items in this purchase.
+                                    </td>
+                                </tr>
+                            )}
+
+                            {purchase.notes && (
+                                <tr>
+                                    <td
+                                        colSpan={5}
+                                        className="py-0.5 pl-6 text-slate-500 italic"
+                                    >
+                                        Note: {purchase.notes}
+                                    </td>
+                                </tr>
+                            )}
+                        </tbody>
+                    );
+                })}
+
+                {purchases.length === 0 && (
+                    <tbody>
+                        <tr>
+                            <td
+                                colSpan={5}
+                                className="px-3 py-6 text-center text-slate-500"
+                            >
+                                No stock purchases for this period.
+                            </td>
+                        </tr>
+                    </tbody>
+                )}
+            </table>
+        </div>
+    );
+}
+
+/* -------------------------------------------------------------------------- */
+/* Statement document                                                         */
+/* -------------------------------------------------------------------------- */
+
+function StatementDocument({
+    data,
+    mode,
+    supplierName,
+}: {
+    data: StatementData;
+    mode: PrintMode;
+    supplierName: string | null; // null = all suppliers
+}) {
+    const { business, purchases, totals } = data;
+
+    const money = (amount: number) => formatMoney(amount, business.currency);
+
+    const overall: PurchaseStatus | null =
+        totals.purchaseCount === 0
+            ? null
+            : totals.outstandingAmount <= 0
+              ? "PAID"
+              : totals.paidAmount > 0
+                ? "PARTIAL"
+                : "UNPAID";
+
+    const payments = purchases
+        .flatMap((purchase) =>
+            purchase.payments.map((payment) => ({ ...payment, purchase })),
+        )
+        .sort(
+            (a, b) =>
+                a.paymentDate.localeCompare(b.paymentDate) || a.id - b.id,
+        );
+
+    const registrations = [
+        ...data.taxRegistrations
+            .filter((registration) => registration.registrationNumber)
+            .map((registration) => ({
+                label: registration.taxSystem,
+                value: registration.registrationNumber,
+            })),
+        ...data.businessRegistrations
+            .filter((registration) => registration.registrationNumber)
+            .map((registration) => ({
+                label: registration.registrationType,
+                value: registration.registrationNumber,
+            })),
+    ];
+
+    const showEntries = mode !== "none";
+    const showSupplier = supplierName === null;
+
+    return (
+        <div className="text-sm leading-normal text-slate-900">
+            {/* Business header */}
+            <div className="flex items-start justify-between gap-6 border-b border-slate-200 pb-6">
+                <div className="flex min-w-0 items-start gap-4">
+                    {business.logoPath ? (
+                        <div className="flex size-16 shrink-0 items-center justify-center overflow-hidden rounded-xl border border-slate-200 bg-white">
+                            <img
+                                src={getFileUrl(business.logoPath) ?? ""}
+                                alt={business.name}
+                                className="size-full object-contain"
+                            />
+                        </div>
+                    ) : (
+                        <div className="flex size-16 shrink-0 items-center justify-center rounded-xl border border-slate-200 bg-slate-50">
+                            <Building2 className="size-7 text-slate-400" />
+                        </div>
+                    )}
+
+                    <div className="min-w-0">
+                        <h2 className="text-xl font-semibold tracking-tight">
+                            {business.name}
+                        </h2>
+
+                        {business.businessCategory && (
+                            <p className="mt-0.5 text-sm text-slate-500">
+                                {business.businessCategory}
+                            </p>
+                        )}
+
+                        {business.address && (
+                            <div className="mt-2 flex items-start gap-2 text-sm text-slate-600">
+                                <MapPin className="mt-0.5 size-4 shrink-0" />
+                                <span>
+                                    {business.address}
+                                    {business.city && `, ${business.city}`}
+                                    {business.state && `, ${business.state}`}
+                                    {business.postalCode && ` - ${business.postalCode}`}
+                                </span>
+                            </div>
+                        )}
+
+                        <div className="mt-1 flex flex-wrap gap-x-4 gap-y-1 text-sm text-slate-600">
+                            {business.phone && (
+                                <span className="inline-flex items-center gap-2">
+                                    <Phone className="size-3.5" />
+                                    {business.phone}
+                                </span>
+                            )}
+                            {business.email && <span>{business.email}</span>}
+                        </div>
+                    </div>
+                </div>
+
+                <div className="shrink-0 text-right">
+                    <p className="text-xs font-medium tracking-wider text-slate-500 uppercase">
+                        Stock Purchases
+                    </p>
+                    <p className="mt-1 text-lg font-semibold">Statement</p>
+                    <p className="mt-1 text-sm text-slate-500">
+                        {formatMonth(data.month)}
+                    </p>
+                </div>
+            </div>
+
+            {/* Supplier */}
+            <div className="flex items-start justify-between gap-4 border-b border-slate-200 py-5">
+                <div>
+                    <p className="text-xs font-medium tracking-wider text-slate-500 uppercase">
+                        Purchases From
+                    </p>
+
+                    <div className="mt-1 flex items-center gap-2">
+                        <Truck className="size-4 text-slate-500" />
+                        <p className="font-semibold">
+                            {supplierName ?? "All suppliers"}
+                        </p>
+                    </div>
+
+                    <p className="mt-1 text-sm text-slate-500">
+                        {totals.purchaseCount}{" "}
+                        {totals.purchaseCount === 1 ? "purchase" : "purchases"} ·{" "}
+                        {totals.itemCount}{" "}
+                        {totals.itemCount === 1 ? "product line" : "product lines"}
+                    </p>
+                </div>
+
+                {overall && (
+                    <div
+                        className={`rounded-full px-3 py-1 text-xs font-medium ${STATUS_CLASS[overall]}`}
+                    >
+                        {STATUS_LABEL[overall]}
+                    </div>
+                )}
+            </div>
+
+            {/* Purchases (hidden in "No entries" mode) */}
+            {showEntries && (
+                <div className="py-6">
+                    <div className="mb-3">
+                        <h3 className="text-base font-semibold">
+                            Stock Purchases — {formatMonth(data.month)}
+                        </h3>
+
+                        <p className="mt-1 text-sm text-slate-500">
+                            {purchases.length}{" "}
+                            {purchases.length === 1 ? "purchase" : "purchases"}
+                            {mode === "summary" && " · product count shown per purchase"}
+                        </p>
+                    </div>
+
+                    {mode === "full" ? (
+                        <PurchasesFullTable
+                            purchases={purchases}
+                            money={money}
+                            showSupplier={showSupplier}
+                        />
+                    ) : (
+                        <PurchasesSummaryTable
+                            purchases={purchases}
+                            money={money}
+                            showSupplier={showSupplier}
+                        />
+                    )}
+                </div>
+            )}
+
+            {/* Summary */}
+            <div
+                className={`flex justify-end break-inside-avoid ${
+                    showEntries ? "" : "pt-6"
+                }`}
+            >
+                <div className="w-full max-w-[320px] space-y-3">
+                    <div className="flex justify-between text-sm">
+                        <span className="text-slate-500">Purchase Total</span>
+                        <span className="tabular-nums">{money(totals.totalAmount)}</span>
+                    </div>
+
+                    {totals.paidAmount > 0 && (
+                        <div className="flex justify-between text-sm text-emerald-700">
+                            <span>Paid</span>
+                            <span className="tabular-nums">{money(totals.paidAmount)}</span>
+                        </div>
+                    )}
+
+                    <div className="flex justify-between border-t border-slate-200 pt-3 text-base font-semibold">
+                        <span>Outstanding</span>
+                        <span
+                            className={
+                                totals.outstandingAmount > 0
+                                    ? "text-red-600 tabular-nums"
+                                    : "text-emerald-700 tabular-nums"
+                            }
+                        >
+                            {money(totals.outstandingAmount)}
+                        </span>
+                    </div>
+                </div>
+            </div>
+
+            {/* Payment history */}
+            {payments.length > 0 && (
+                <div className="mt-8 break-inside-avoid border-t border-slate-200 pt-6">
+                    <div className="mb-4">
+                        <h3 className="text-base font-semibold">Payment History</h3>
+                        <p className="mt-1 text-sm text-slate-500">
+                            Payments made against these purchases.
+                        </p>
+                    </div>
+
+                    <div className="overflow-hidden rounded-xl border border-slate-200">
+                        <table className="w-full text-sm">
+                            <thead className="bg-slate-50">
+                                <tr className="border-b border-slate-200">
+                                    <th className="px-4 py-3 text-left font-medium text-slate-600">
+                                        Date
+                                    </th>
+                                    <th className="px-4 py-3 text-left font-medium text-slate-600">
+                                        Purchase
+                                    </th>
+                                    <th className="px-4 py-3 text-left font-medium text-slate-600">
+                                        Method
+                                    </th>
+                                    <th className="px-4 py-3 text-left font-medium text-slate-600">
+                                        Reference
+                                    </th>
+                                    <th className="px-4 py-3 text-right font-medium text-slate-600">
+                                        Amount
+                                    </th>
+                                </tr>
+                            </thead>
+
+                            <tbody>
+                                {payments.map((payment) => (
+                                    <tr
+                                        key={payment.id}
+                                        className="break-inside-avoid border-b border-slate-200 last:border-b-0"
+                                    >
+                                        <td className="px-4 py-3">
+                                            {formatDate(payment.paymentDate)}
+                                        </td>
+                                        <td className="px-4 py-3 text-slate-500">
+                                            {purchaseRef(payment.purchase)}
+                                        </td>
+                                        <td className="px-4 py-3 capitalize">
+                                            {payment.paymentMethod
+                                                .toLowerCase()
+                                                .replace(/_/g, " ")}
+                                        </td>
+                                        <td className="px-4 py-3 text-slate-500">
+                                            {payment.reference || "-"}
+                                        </td>
+                                        <td className="px-4 py-3 text-right font-medium text-emerald-700 tabular-nums">
+                                            {money(payment.amount)}
+                                        </td>
+                                    </tr>
+                                ))}
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+            )}
+
+            {/* Footer */}
+            <div className="mt-8 break-inside-avoid border-t border-slate-200 pt-5">
+                {registrations.length > 0 && (
+                    <div className="mb-4 flex flex-wrap justify-center gap-x-5 gap-y-2 text-xs text-slate-500">
+                        {registrations.map((registration, index) => (
+                            <span key={`${registration.label}-${index}`}>
+                                {registration.label}:{" "}
+                                <span className="font-medium text-slate-700">
+                                    {registration.value}
+                                </span>
+                            </span>
+                        ))}
+                    </div>
+                )}
+
+                <p className="text-center text-xs text-slate-500">
+                    Generated by {business.name}
+                </p>
+            </div>
+        </div>
+    );
+}
+
+/* -------------------------------------------------------------------------- */
+/* Dialog                                                                     */
+/* -------------------------------------------------------------------------- */
+
+export function StockPurchaseMonthlyStatementPreview({
+    open,
+    onOpenChange,
+    month,
+    suppliers,
+}: Props) {
+    const [supplierId, setSupplierId] = useState("all");
+    const [mode, setMode] = useState<PrintMode>("summary");
+
+    const [loaded, setLoaded] = useState<Loaded | null>(null);
+    const [status, setStatus] = useState<LoadStatus>("idle");
+    const [error, setError] = useState<string | null>(null);
+    const [reloadKey, setReloadKey] = useState(0);
+
+    const [isExporting, setIsExporting] = useState(false);
+    const [exportError, setExportError] = useState<string | null>(null);
+
+    const exportRef = useRef<HTMLDivElement>(null);
+
+    const key = `${month}|${supplierId}`;
+
+    const selectedSupplier = useMemo(
+        () =>
+            supplierId === "all"
+                ? null
+                : (suppliers.find((supplier) => String(supplier.id) === supplierId) ??
+                  null),
+        [supplierId, suppliers],
+    );
+
+    /* ---------------------------------------------------------------------- */
+    /* Load statement                                                         */
+    /* ---------------------------------------------------------------------- */
+
+    useEffect(() => {
+        if (!open || !month) return;
+
+        const controller = new AbortController();
+
+        async function loadStatement() {
+            setStatus("loading");
+            setError(null);
+
+            try {
+                const params = new URLSearchParams({ month });
+                if (supplierId !== "all") params.set("supplierId", supplierId);
+
+                const response = await fetch(
+                    `/api/stock-purchases/monthly-statement?${params.toString()}`,
+                    {
+                        method: "GET",
+                        cache: "no-store",
+                        signal: controller.signal,
+                    },
+                );
+
+                const result = await response.json();
+
+                if (!response.ok) {
+                    throw new Error(
+                        result?.error ?? "Unable to load the monthly statement.",
+                    );
+                }
+
+                setLoaded({ key, data: result as StatementData });
+                setStatus("success");
+            } catch (err) {
+                if (controller.signal.aborted) return;
+
+                setError(
+                    err instanceof Error
+                        ? err.message
+                        : "Unable to load the monthly statement.",
+                );
+                setStatus("error");
+            }
+        }
+
+        void loadStatement();
+
+        return () => controller.abort();
+    }, [open, month, supplierId, key, reloadKey]);
+
+    useEffect(() => {
+        setExportError(null);
+    }, [open, month, supplierId]);
+
+    // Summary and all suppliers are the defaults every time the dialog opens
+    useEffect(() => {
+        if (open) {
+            setMode("summary");
+            setSupplierId("all");
+        }
+    }, [open]);
+
+    /* ---------------------------------------------------------------------- */
+    /* Current statement                                                      */
+    /* ---------------------------------------------------------------------- */
+
+    const current = loaded && loaded.key === key ? loaded.data : null;
+
+    const showError = status === "error" && !current;
+    const showLoading = !current && !showError;
+
+    const baseName = `Stock-Purchases-${month}-${slugify(
+        selectedSupplier?.name ?? "all-suppliers",
+    )}`;
+
+    const activeMode =
+        PRINT_MODES.find((option) => option.value === mode) ?? PRINT_MODES[0];
+
+    /* ---------------------------------------------------------------------- */
+    /* Print                                                                  */
+    /* ---------------------------------------------------------------------- */
+
+    const handlePrint = useReactToPrint({
+        contentRef: exportRef,
+        documentTitle: baseName,
+        pageStyle: PRINT_PAGE_STYLE,
+    });
+
+    /* ---------------------------------------------------------------------- */
+    /* Download PDF                                                           */
+    /* ---------------------------------------------------------------------- */
+
+    async function handleDownload() {
+        const node = exportRef.current;
+
+        if (!node || !current) return;
+
+        setIsExporting(true);
+        setExportError(null);
+
+        try {
+            const [{ default: html2canvas }, { jsPDF }] = await Promise.all([
+                import("html2canvas-pro"),
+                import("jspdf"),
+            ]);
+
+            const canvas = await html2canvas(node, {
+                scale: 2,
+                backgroundColor: "#ffffff",
+                useCORS: true,
+                logging: false,
+                windowWidth: 1200,
+
+                onclone: (_document, clonedNode) => {
+                    const wrapper = clonedNode.parentElement;
+
+                    if (wrapper) {
+                        wrapper.style.left = "0";
+                        wrapper.style.top = "0";
+                    }
+                },
+            });
+
+            const pdf = new jsPDF({
+                unit: "mm",
+                format: "a4",
+                orientation: "portrait",
+                compress: true,
+            });
+
+            const pageWidth = pdf.internal.pageSize.getWidth();
+            const pageHeight = pdf.internal.pageSize.getHeight();
+
+            const contentWidth = pageWidth - PAGE_MARGIN_MM * 2;
+            const contentHeight = pageHeight - PAGE_MARGIN_MM * 2;
+
+            const pxPerMm = canvas.width / contentWidth;
+            const pageHeightPx = Math.floor(contentHeight * pxPerMm);
+            const domRatio = canvas.width / node.offsetWidth;
+
+            const blocks = collectBlocks(node, domRatio);
+
+            let offsetY = 0;
+            let pageIndex = 0;
+
+            while (offsetY < canvas.height) {
+                const maxEnd = Math.min(offsetY + pageHeightPx, canvas.height);
+
+                const endY =
+                    maxEnd >= canvas.height
+                        ? canvas.height
+                        : findSliceEnd(offsetY, maxEnd, blocks, pageHeightPx);
+
+                const sliceHeight = Math.max(1, endY - offsetY);
+
+                const slice = document.createElement("canvas");
+                slice.width = canvas.width;
+                slice.height = sliceHeight;
+
+                const context = slice.getContext("2d");
+
+                if (!context) {
+                    throw new Error("Could not prepare the PDF page.");
+                }
+
+                context.drawImage(
+                    canvas,
+                    0,
+                    offsetY,
+                    canvas.width,
+                    sliceHeight,
+                    0,
+                    0,
+                    canvas.width,
+                    sliceHeight,
+                );
+
+                if (pageIndex > 0) pdf.addPage();
+
+                pdf.addImage(
+                    slice.toDataURL("image/png"),
+                    "PNG",
+                    PAGE_MARGIN_MM,
+                    PAGE_MARGIN_MM,
+                    contentWidth,
+                    sliceHeight / pxPerMm,
+                );
+
+                offsetY += sliceHeight;
+                pageIndex += 1;
+            }
+
+            const totalPages = pdf.getNumberOfPages();
+
+            if (totalPages > 1) {
+                pdf.setFontSize(8);
+                pdf.setTextColor(120);
+
+                for (let page = 1; page <= totalPages; page++) {
+                    pdf.setPage(page);
+                    pdf.text(
+                        `Page ${page} of ${totalPages}`,
+                        pageWidth / 2,
+                        pageHeight - 6,
+                        { align: "center" },
+                    );
+                }
+            }
+
+            pdf.save(`${baseName}.pdf`);
+        } catch (err) {
+            console.error("Failed to generate the stock purchase PDF:", err);
+
+            setExportError(
+                "Couldn't generate the PDF. Try Print and choose Save as PDF instead.",
+            );
+        } finally {
+            setIsExporting(false);
+        }
+    }
+
+    /* ---------------------------------------------------------------------- */
+    /* Render                                                                 */
+    /* ---------------------------------------------------------------------- */
+
+    return (
+        <>
+            <Dialog open={open} onOpenChange={onOpenChange}>
+                <DialogContent className="flex max-h-[90dvh] flex-col gap-0 p-0 sm:max-w-4xl">
+                    <DialogHeader className="shrink-0 border-b px-6 py-4">
+                        <DialogTitle className="flex items-center gap-2">
+                            <FileText className="size-5" />
+                            Monthly Stock Purchase Statement
+                        </DialogTitle>
+
+                        <DialogDescription>
+                            {current
+                                ? `${formatMonth(month)} · ${
+                                      selectedSupplier?.name ?? "All suppliers"
+                                  }`
+                                : "Review the monthly statement before printing or saving it as a PDF."}
+                        </DialogDescription>
+                    </DialogHeader>
+
+                    {/* Supplier + print mode */}
+                    <div className="flex shrink-0 flex-col gap-3 border-b px-6 py-3 lg:flex-row lg:items-center lg:justify-between">
+                        <div className="flex flex-col gap-2 sm:flex-row sm:items-center">
+                            <Select
+                                value={supplierId}
+                                onValueChange={(value) => setSupplierId(value ?? "all")}
+                                disabled={isExporting}
+                            >
+                                <SelectTrigger
+                                    className="w-full sm:w-56"
+                                    aria-label="Supplier"
+                                >
+                                    <SelectValue placeholder="All suppliers">
+                                        {selectedSupplier?.name ?? "All suppliers"}
+                                    </SelectValue>
+                                </SelectTrigger>
+                                <SelectContent>
+                                    <SelectItem value="all">All suppliers</SelectItem>
+                                    {suppliers.map((supplier) => (
+                                        <SelectItem
+                                            key={supplier.id}
+                                            value={String(supplier.id)}
+                                        >
+                                            {supplier.name}
+                                        </SelectItem>
+                                    ))}
+                                </SelectContent>
+                            </Select>
+
+                            <Tabs
+                                value={mode}
+                                onValueChange={(value) => {
+                                    if (isPrintMode(value)) setMode(value);
+                                }}
+                            >
+                                <TabsList>
+                                    {PRINT_MODES.map((option) => (
+                                        <TabsTrigger
+                                            key={option.value}
+                                            value={option.value}
+                                            disabled={isExporting}
+                                        >
+                                            {option.label}
+                                        </TabsTrigger>
+                                    ))}
+                                </TabsList>
+                            </Tabs>
+                        </div>
+
+                        <p className="text-xs text-muted-foreground">
+                            {activeMode.hint}
+                        </p>
+                    </div>
+
+                    {/* Scrollable preview */}
+                    <div className="min-h-0 flex-1 overflow-auto bg-muted/50 p-4 sm:p-6">
+                        {showLoading && (
+                            <div
+                                className="mx-auto max-w-[794px] space-y-6 rounded-sm bg-white p-10 ring-1 ring-slate-200"
+                                aria-busy="true"
+                                aria-label="Loading monthly statement"
+                            >
+                                <div className="flex justify-between gap-6">
+                                    <div className="flex gap-4">
+                                        <Skeleton className="size-16 rounded-xl" />
+                                        <div className="space-y-2">
+                                            <Skeleton className="h-5 w-48" />
+                                            <Skeleton className="h-4 w-32" />
+                                        </div>
+                                    </div>
+                                    <Skeleton className="h-12 w-32" />
+                                </div>
+
+                                <Skeleton className="h-16 w-full" />
+                                <Skeleton className="h-40 w-full" />
+                                <Skeleton className="h-32 w-full" />
+                            </div>
+                        )}
+
+                        {showError && (
+                            <div className="flex min-h-72 flex-col items-center justify-center gap-3 text-center">
+                                <p className="text-sm font-medium text-destructive">
+                                    Unable to load monthly statement
+                                </p>
+
+                                <p className="text-sm text-muted-foreground">{error}</p>
+
+                                <Button
+                                    type="button"
+                                    variant="outline"
+                                    size="sm"
+                                    onClick={() => setReloadKey((value) => value + 1)}
+                                >
+                                    <RefreshCw />
+                                    Try again
+                                </Button>
+                            </div>
+                        )}
+
+                        {current && (
+                            <div className="overflow-x-auto">
+                                <div className="mx-auto max-w-[794px] min-w-[640px] rounded-sm bg-white p-8 text-slate-900 shadow-sm ring-1 ring-slate-200 sm:p-12">
+                                    <StatementDocument
+                                        data={current}
+                                        mode={mode}
+                                        supplierName={selectedSupplier?.name ?? null}
+                                    />
+                                </div>
+                            </div>
+                        )}
+                    </div>
+
+                    {exportError && (
+                        <p
+                            role="alert"
+                            className="shrink-0 border-t bg-destructive/10 px-6 py-2 text-sm text-destructive"
+                        >
+                            {exportError}
+                        </p>
+                    )}
+
+                    {/* Fixed footer */}
+                    <div className="flex shrink-0 flex-col-reverse gap-2 border-t px-6 py-4 sm:flex-row sm:items-center sm:justify-between">
+                        <Button
+                            type="button"
+                            variant="outline"
+                            onClick={() => onOpenChange(false)}
+                        >
+                            Close
+                        </Button>
+
+                        <div className="flex flex-col gap-2 sm:flex-row sm:items-center">
+                            <Button
+                                type="button"
+                                variant="outline"
+                                disabled={!current || isExporting}
+                                onClick={handleDownload}
+                            >
+                                {isExporting ? (
+                                    <Loader2 className="animate-spin" />
+                                ) : (
+                                    <Download />
+                                )}
+                                {isExporting ? "Creating PDF..." : "Download PDF"}
+                            </Button>
+
+                            <Button
+                                type="button"
+                                disabled={!current || isExporting}
+                                onClick={() => handlePrint()}
+                            >
+                                <Printer />
+                                Print
+                            </Button>
+                        </div>
+                    </div>
+                </DialogContent>
+            </Dialog>
+
+            {/* Hidden fixed-width print/PDF copy */}
+            {current &&
+                typeof document !== "undefined" &&
+                createPortal(
+                    <div
+                        aria-hidden="true"
+                        className="pointer-events-none fixed top-0 -left-[10000px]"
+                    >
+                        <div
+                            ref={exportRef}
+                            className="bill-export bg-white text-slate-900"
+                            style={{ width: BILL_WIDTH }}
+                        >
+                            <StatementDocument
+                                data={current}
+                                mode={mode}
+                                supplierName={selectedSupplier?.name ?? null}
+                            />
+                        </div>
+                    </div>,
+                    document.body,
+                )}
+        </>
+    );
+}

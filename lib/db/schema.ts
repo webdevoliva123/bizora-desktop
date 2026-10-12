@@ -1000,6 +1000,35 @@ export const dailyEntryPayments = sqliteTable(
       ),
     ],
   );
+
+  export const stockPurchasePayments = sqliteTable(
+    "stock_purchase_payments",
+    {
+      id: integer("id").primaryKey({ autoIncrement: true }),
+  
+      businessId: integer("business_id")
+        .notNull()
+        .references(() => businesses.id, { onDelete: "cascade" }),
+  
+      purchaseId: integer("purchase_id")
+        .notNull()
+        .references(() => stockPurchases.id, { onDelete: "cascade" }),
+  
+      amount: integer("amount").notNull(), // paise
+  
+      paymentMethod: text("payment_method").notNull(),
+      paymentDate: text("payment_date").notNull(),
+      reference: text("reference"),
+      notes: text("notes"),
+  
+      createdAt: text("created_at").notNull(),
+    },
+    (table) => [
+      index("stock_purchase_payments_business_id_idx").on(table.businessId),
+      index("stock_purchase_payments_purchase_id_idx").on(table.purchaseId),
+      index("stock_purchase_payments_payment_date_idx").on(table.paymentDate),
+    ],
+  );
   
   /* -------------------------------------------------------------------------- */
   /* Stock Purchase Items                                                       */

@@ -48,6 +48,31 @@ export const PAYMENT_METHOD_OPTIONS: {
   },
 ];
 
+export const PAYMENT_TYPE_OPTIONS: {
+  value: PAYMENT_TYPE;
+  label: string;
+  description: string;
+}[] = [
+  {
+    value: "IMMEDIATE",
+    label: "Immediate",
+    description: "Customer pays now, fully or partly.",
+  },
+  {
+    value: "MONTHLY",
+    label: "Monthly",
+    description: "Added to the customer's monthly account.",
+  },
+];
+
+export const PAYMENT_OPTIONS: { value: PAYMENT_STATUS; label: string }[] = [
+  { value: "UNPAID", label: "Unpaid" },
+  { value: "PARTIAL", label: "Partial" },
+  { value: "PAID", label: "Paid" },
+];
+
+
+
 // ENTRIES
 
 export type ENTRY_TYPE = "CUSTOMER_SALE" | "QUICK_SALE"

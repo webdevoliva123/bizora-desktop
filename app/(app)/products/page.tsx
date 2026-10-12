@@ -1,5 +1,5 @@
 
-import { Package } from "lucide-react";
+import { Package, PackageCheck, PackageX, Tags } from "lucide-react";
 
 import { PageContainer } from "@/components/shared/page-container";
 import { PageHeader } from "@/components/shared/page-header";
@@ -16,6 +16,7 @@ import {
 
 import { ProductDialog } from "./components/product-dialog";
 import { ProductsTable } from "./components/products-table";
+import StatCard from "@/components/global-common/stat-card";
 
 export default async function ProductsPage() {
   const setup = await getSetupStatus();
@@ -47,50 +48,30 @@ export default async function ProductsPage() {
       <section className="mt-6 space-y-6">
         {/* Product summary cards */}
         <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-4">
-          <div className="rounded-xl border bg-card p-5">
-            <div className="flex items-center justify-between">
-              <p className="text-sm text-muted-foreground">
-                Total Products
-              </p>
-              <Package className="size-4 text-muted-foreground" />
-            </div>
+          <StatCard
+            title="Total Products"
+            value={products.length}
+            icon={Package}
+          />
 
-            <p className="mt-3 text-2xl font-semibold">
-              {products.length}
-            </p>
-          </div>
+          <StatCard
+            title="Active Products"
+            value={activeProducts.length}
+            icon={PackageCheck}
+          />
 
-          <div className="rounded-xl border bg-card p-5">
-            <p className="text-sm text-muted-foreground">
-              Active Products
-            </p>
+          <StatCard
+            title="Inactive Products"
+            value={inactiveProducts.length}
+            icon={PackageX}
+          />
 
-            <p className="mt-3 text-2xl font-semibold">
-              {activeProducts.length}
-            </p>
-          </div>
-
-          <div className="rounded-xl border bg-card p-5">
-            <p className="text-sm text-muted-foreground">
-              Inactive Products
-            </p>
-
-            <p className="mt-3 text-2xl font-semibold">
-              {inactiveProducts.length}
-            </p>
-          </div>
-
-          <div className="rounded-xl border bg-card p-5">
-            <p className="text-sm text-muted-foreground">
-              Product Categories
-            </p>
-
-            <p className="mt-3 text-2xl font-semibold">
-              {categories.length}
-            </p>
-          </div>
+          <StatCard
+            title="Product Categories"
+            value={categories.length}
+            icon={Tags}
+          />
         </div>
-
         {/* Searchable product listing */}
         <ProductsTable
           products={products}
