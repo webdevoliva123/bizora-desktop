@@ -445,7 +445,7 @@ export function DailyEntriesTable({
                                     <p className="mt-1 text-sm text-muted-foreground">
                                         {entryFilter !== "ALL"
                                             ? "Try another entry type or date."
-                                            : "Use Add Entry to record one, or pick another date."}
+                                            : "Use Add Entry to record one, or pick another date."}  
                                     </p>
                                 </TableCell>
                             </TableRow>

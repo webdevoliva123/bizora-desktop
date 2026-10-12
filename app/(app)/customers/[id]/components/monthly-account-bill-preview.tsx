@@ -426,7 +426,9 @@ function BillDocument({
     bill: MonthlyAccountBill;
     mode: PrintMode;
 }) {
-    const { business, customer } = bill;
+    const { business, customer,entries } = bill;
+
+    console.log({entries})
 
     const details = bill.paymentDetails;
 
