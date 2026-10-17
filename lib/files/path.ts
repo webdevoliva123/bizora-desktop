@@ -2,10 +2,9 @@ import "server-only";
 
 import path from "node:path";
 
-const BUSINESS_FILES_DIR = path.resolve(
-  process.cwd(),
-  "business-files",
-);
+import { getBusinessFilesRoot } from "@/lib/paths";
+
+const BUSINESS_FILES_DIR = path.resolve(getBusinessFilesRoot());
 
 export function getFilePath(
   filePath: string | null | undefined,

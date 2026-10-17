@@ -6,6 +6,9 @@ import { TooltipProvider } from "@/components/ui/tooltip";
 
 import "./globals.css";
 
+// Setup status lives in the local DB, so no page may be cached at build time.
+export const dynamic = "force-dynamic";
+
 const geistSans = Geist({
   variable: "--font-geist-sans",
   subsets: ["latin"],

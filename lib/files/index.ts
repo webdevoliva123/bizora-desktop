@@ -3,10 +3,9 @@ import "server-only";
 import fs from "node:fs";
 import path from "node:path";
 
-const BUSINESS_FILES_DIR = path.join(
-  process.cwd(),
-  "business-files",
-);
+import { getBusinessFilesRoot } from "@/lib/paths";
+
+const BUSINESS_FILES_DIR = getBusinessFilesRoot();
 
 export function getBusinessFilesDir() {
   return BUSINESS_FILES_DIR;

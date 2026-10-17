@@ -12,7 +12,12 @@
     "lint": "eslint",
     "db:generate": "drizzle-kit generate",
     "db:migrate": "drizzle-kit migrate",
-    "db:studio": "drizzle-kit studio"
+    "db:studio": "drizzle-kit studio",
+    "build:desktop": "next build && npm run build:electron && node scripts/prepare-electron.mjs",
+    "dist:mac": "npm run build:desktop && electron-builder --mac",
+    "dist:win": "npm run build:desktop && electron-builder --win",
+    "dist:linux": "npm run build:desktop && electron-builder --linux",
+    "clean:data": "node -e \"const fs=require('fs');for(const f of ['data/bizora.db','data/bizora.db-wal','data/bizora.db-shm'])fs.rmSync(f,{force:true});fs.rmSync('business-files',{recursive:true,force:true});console.log('Local data deleted.')\""
   },
   "dependencies": {
     "@base-ui/react": "^1.8.0",
@@ -50,6 +55,63 @@
     "eslint-config-next": "16.3.8",
     "tailwindcss": "^4",
     "typescript": "^5",
-    "wait-on": "^9.5.1"
+    "wait-on": "^9.5.1",
+    "@electron/rebuild": "^4.0.1"
+  },
+  "description": "Bizora - business management and billing desktop app",
+  "author": {
+    "name": "Bizora",
+    "email": "support@bizora.app"
+  },
+  "homepage": "https://bizora.app",
+  "build": {
+    "appId": "com.bizora.app",
+    "productName": "Bizora",
+    "directories": {
+      "output": "release",
+      "buildResources": "build"
+    },
+    "files": [
+      "electron-dist/**/*",
+      "package.json",
+      "!node_modules/**"
+    ],
+    "extraResources": [
+      {
+        "from": ".next/standalone",
+        "to": "app"
+      },
+      {
+        "from": "drizzle",
+        "to": "drizzle"
+      }
+    ],
+    "mac": {
+      "category": "public.app-category.business",
+      "target": [
+        "dmg"
+      ]
+    },
+    "win": {
+      "target": [
+        "nsis"
+      ]
+    },
+    "nsis": {
+      "oneClick": false,
+      "perMachine": false,
+      "allowToChangeInstallationDirectory": true,
+      "deleteAppDataOnUninstall": false
+    },
+    "linux": {
+      "target": [
+        "AppImage",
+        "deb"
+      ],
+      "category": "Office",
+      "maintainer": "Bizora <support@bizora.app>"
+    },
+    "afterPack": "scripts/after-pack.cjs",
+    "npmRebuild": false
   }
 }

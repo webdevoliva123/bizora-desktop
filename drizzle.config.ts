@@ -5,6 +5,6 @@ export default defineConfig({
   out: "./drizzle",
   dialect: "sqlite",
   dbCredentials: {
-    url: "./data/bizora.db",
+    url: process.env.BIZORA_DB_PATH ?? "./data/bizora.db",
   },
 });
