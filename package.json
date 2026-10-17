@@ -90,12 +90,14 @@
       "category": "public.app-category.business",
       "target": [
         "dmg"
-      ]
+      ],
+      "artifactName": "Bizora-mac-arm64.${ext}"
     },
     "win": {
       "target": [
         "nsis"
-      ]
+      ],
+      "artifactName": "Bizora-windows-x64.${ext}"
     },
     "nsis": {
       "oneClick": false,
@@ -109,7 +111,8 @@
         "deb"
       ],
       "category": "Office",
-      "maintainer": "Bizora <support@bizora.app>"
+      "maintainer": "Bizora <support@bizora.app>",
+      "artifactName": "Bizora-linux-x64.${ext}"
     },
     "afterPack": "scripts/after-pack.cjs",
     "npmRebuild": false
